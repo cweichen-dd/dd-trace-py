@@ -59,14 +59,11 @@ build_base_venvs:
     matrix:
       - PYTHON_VERSION: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
   cache:
-    - key:
-        files:
-          - src/core/Cargo.toml
-          - src/core/Cargo.lock
-      paths:
-        - .cargo/registry
-        - .cargo/git
-        - src/core/target
+    - key: $CI_JOB_NAME_SLUG-$CI_COMMIT_REF_SLUG
+      fallback_keys:
+        - $CI_JOB_NAME_SLUG-main
+        - $CI_JOB_NAME_SLUG
+      untracked: true
   variables:
     CMAKE_BUILD_PARALLEL_LEVEL: 12
     CARGO_BUILD_JOBS: 12
