@@ -9,12 +9,10 @@ FROM base-$TARGETARCH
 ENV PIPX_DEFAULT_PYTHON=python3.12
 ENV PYTHONUNBUFFERED=1
 ENV CARGO_ROOT=/root/.cargo
-ENV PATH=${CARGO_ROOT}/bin:$PATH
+ENV PATH=/opt/_internal/pipx/shared/bin:${CARGO_ROOT}/bin:$PATH
 
-# Ensure Python versions we need are installed, and we update python/python3 link
-RUN manylinux-interpreters ensure cp37-cp37m cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313 \
-    && ln -sf /usr/bin/${PIPX_DEFAULT_PYTHON} /usr/bin/python3 \
-    && ln -sf /usr/bin/${PIPX_DEFAULT_PYTHON} /usr/bin/python
+# Ensure Python versions we need are installed
+RUN manylinux-interpreters ensure cp37-cp37m cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312 cp313-cp313
 
 # Install jq
 RUN curl -L https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-${TARGETARCH} -o /usr/local/bin/jq && \
