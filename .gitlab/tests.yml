@@ -62,7 +62,6 @@ build_base_venvs:
     CMAKE_BUILD_PARALLEL_LEVEL: 12
     CARGO_BUILD_JOBS: 12
     PIP_VERBOSE: 1
-    DD_PROFILING_NATIVE_TESTS: 1
     _DD_DEBUG_EXT: 1
   script:
     - pip install riot==0.20.1
