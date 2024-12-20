@@ -64,12 +64,13 @@ build_base_venvs:
           - src/core/Cargo.toml
           - src/core/Cargo.lock
       paths:
-        - /root/.cargo/registry/
-        - /root/.cargo/git/
-        - src/core/target/
+        - .cargo/registry
+        - .cargo/git
+        - src/core/target
   variables:
     CMAKE_BUILD_PARALLEL_LEVEL: 12
     CARGO_BUILD_JOBS: 12
+    CARGO_HOME: /go/src/github.com/DataDog/apm-reliability/dd-trace-py/.cargo/
     PIP_VERBOSE: 1
     DD_PROFILING_NATIVE_TESTS: 1
     _DD_DEBUG_EXT: 1
