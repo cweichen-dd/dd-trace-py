@@ -232,6 +232,7 @@ class SpanTestCase(TracerTestCase):
 
     def test_get_span_returns_none_by_default(self):
         s = Span(name="test.span")
+        assert False, "Failing on purpose"
         assert s.duration is None
 
     def test_traceback_with_error(self):
