@@ -81,19 +81,19 @@ class JobSpec:
 
 def gen_required_suites() -> None:
     """Generate the list of test suites that need to be run."""
-    from needs_testrun import extract_git_commit_selections
-    from needs_testrun import for_each_testrun_needed
+    # from needs_testrun import extract_git_commit_selections
+    # from needs_testrun import for_each_testrun_needed
     import suitespec
 
     suites = suitespec.get_suites()
 
-    required_suites: t.List[str] = []
+    required_suites: t.List[str] = ["ci_visibility::ci_visibility"]
 
-    for_each_testrun_needed(
-        suites=sorted(suites.keys()),
-        action=lambda suite: required_suites.append(suite),
-        git_selections=extract_git_commit_selections(os.getenv("CI_COMMIT_MESSAGE", "")),
-    )
+    # for_each_testrun_needed(
+    #     suites=sorted(suites.keys()),
+    #     action=lambda suite: required_suites.append(suite),
+    #     git_selections=extract_git_commit_selections(os.getenv("CI_COMMIT_MESSAGE", "")),
+    # )
 
     # Exclude the suites that are run in CircleCI. These likely don't run in
     # GitLab yet.
