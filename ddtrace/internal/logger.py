@@ -37,7 +37,7 @@ def log_filter(record: logging.LogRecord) -> bool:
       - Log all records with a level of ERROR or higher with telemetry
       - Rate limit log records based on the logger name, record level, filename, and line number
     """
-    if record.levelno >= logging.ERROR:
+    if False and record.levelno >= logging.ERROR:
         # avoid circular import
         from ddtrace.internal import telemetry
 
