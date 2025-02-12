@@ -1,0 +1,4 @@
+---
+fixes:
+  - |
+    lib-injection: Fix issue when not injecting because of a version of ``boto3`` older than ``1.34.49``.
