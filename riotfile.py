@@ -2480,7 +2480,6 @@ venv = Venv(
                 "huggingface-hub": latest,
                 "ai21": latest,
                 "exceptiongroup": latest,
-                "psutil": latest,
                 "pytest-randomly": "==3.10.1",
                 "numexpr": "==2.8.5",
                 "greenlet": "==3.0.3",

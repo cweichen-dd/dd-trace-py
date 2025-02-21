@@ -129,24 +129,6 @@ def verify_checksum_from_hash(expected_checksum, filename):
         sys.exit(1)
 
 
-def load_module_from_project_file(mod_name, fname):
-    """
-    Helper used to load a module from a file in this project
-
-    DEV: Loading this way will by-pass loading all parent modules
-         e.g. importing `ddtrace.vendor.psutil.setup` will load `ddtrace/__init__.py`
-         which has side effects like loading the tracer
-    """
-    fpath = HERE / fname
-
-    import importlib.util
-
-    spec = importlib.util.spec_from_file_location(mod_name, fpath)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
 def is_64_bit_python():
     return sys.maxsize > (1 << 32)
 
@@ -515,17 +497,6 @@ except EnvironmentError as e:
     sys.exit(1)
 
 
-def get_exts_for(name):
-    try:
-        mod = load_module_from_project_file(
-            "ddtrace.vendor.{}.setup".format(name), "ddtrace/vendor/{}/setup.py".format(name)
-        )
-        return mod.get_extensions()
-    except Exception as e:
-        print("WARNING: Failed to load %s extensions, skipping: %s" % (name, e))
-        return []
-
-
 if sys.byteorder == "big":
     encoding_macros = [("__BIG_ENDIAN__", "1")]
 else:
@@ -707,8 +678,7 @@ setup(
         force=True,
         annotate=os.getenv("_DD_CYTHON_ANNOTATE") == "1",
         compiler_directives={"language_level": "3"},
-    )
-    + get_exts_for("psutil"),
+    ),
     rust_extensions=[
         RustExtension(
             "ddtrace.internal.native._native",

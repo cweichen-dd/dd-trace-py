@@ -5,12 +5,12 @@ import signal
 import subprocess
 import sys
 
+import psutil
 from requests.exceptions import ConnectionError
 
 from ddtrace.appsec._constants import IAST
 from ddtrace.internal.compat import PYTHON_VERSION_INFO
 from ddtrace.internal.utils.retry import RetryError
-from ddtrace.vendor import psutil
 from tests.utils import _build_env
 from tests.webclient import Client
 
