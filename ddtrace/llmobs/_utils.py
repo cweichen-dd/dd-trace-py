@@ -27,7 +27,7 @@ from ddtrace.trace import Span
 log = get_logger(__name__)
 
 
-def validate_prompt(prompt: dict) -> Dict[str, Union[str, Dict[str, Any], List[str], List[Tuple[str, str]]]]:
+def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[str, Any], List[str], List[Tuple[str, str]]]]:
     validated_prompt = {}  # type: Dict[str, Union[str, Dict[str,Any], List[str], List[Tuple[str, str]]]]
 
     if not isinstance(prompt, dict):
