@@ -27,11 +27,11 @@ class Prompt(TypedDict, total=False):
     A Prompt object that contains the information needed to render a prompt.
     name: str - the name of the prompt template, should be unique per ml_app.
     version: str - the version of the prompt. SemVer  Defaults to 1.0.0
+    id: str - the id of the prompt set by the user. can substitute for name
     variables: Dict[str, str] - a dictionary of variables that will be used to render the prompt
     template: Union[str, List[Tuple[str, str]]] -
         - A list of 2-tuples of (role,template) where role is the role of the prompt and template is the template string
         - It also accepts a string that represents the template for the prompt. Will default to "user" for a role
-    id: str - the id of the prompt set by the user. can substitute for name
     example_variables: List[str] - a list of variable key names that contain example information
     constraint_variables: List[str] - a list of variable key names that contain constraint information
     rag_context_variables: List[str] - a list of variable key names that contain ground truth context information
@@ -40,12 +40,13 @@ class Prompt(TypedDict, total=False):
 
     name: str
     version: str
+    id: str
     template: Union[str, List[Tuple[str, str]]]
     variables: Dict[str, str]
-    example_variable_keys: List[str]
-    constraint_variable_keys: List[str]
-    rag_context_variable_keys: List[str]
-    rag_query_variable_keys: List[str]
+    example_variables: List[str]
+    constraint_variables: List[str]
+    rag_context_variables: List[str]
+    rag_query_variables: List[str]
 
 
 class Messages:
