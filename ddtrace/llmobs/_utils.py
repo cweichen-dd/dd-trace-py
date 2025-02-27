@@ -1,7 +1,11 @@
+from hashlib import sha1
 import json
+from re import match
+from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Tuple
 from typing import Union
 
 from ddtrace import config
@@ -23,34 +27,97 @@ from ddtrace.trace import Span
 log = get_logger(__name__)
 
 
-def validate_prompt(prompt: dict) -> Dict[str, Union[str, dict, List[str]]]:
-    validated_prompt = {}  # type: Dict[str, Union[str, dict, List[str]]]
+def validate_prompt(prompt: dict) -> Dict[str, Union[str, Dict[str, Any], List[str], List[Tuple[str, str]]]]:
+    validated_prompt = {}  # type: Dict[str, Union[str, Dict[str,Any], List[str], List[Tuple[str, str]]]]
+
     if not isinstance(prompt, dict):
         raise TypeError("Prompt must be a dictionary")
+
+    name = prompt.get("name")
     variables = prompt.get("variables")
     template = prompt.get("template")
     version = prompt.get("version")
     prompt_id = prompt.get("id")
+    example_variable_keys = prompt.get("example_variables")
+    constraint_variable_keys = prompt.get("constraint_variables")
     ctx_variable_keys = prompt.get("rag_context_variables")
     rag_query_variable_keys = prompt.get("rag_query_variables")
-    if variables is not None:
-        if not isinstance(variables, dict):
-            raise TypeError("Prompt variables must be a dictionary.")
-        if not any(isinstance(k, str) or isinstance(v, str) for k, v in variables.items()):
-            raise TypeError("Prompt variable keys and values must be strings.")
-        validated_prompt["variables"] = variables
-    if template is not None:
-        if not isinstance(template, str):
-            raise TypeError("Prompt template must be a string")
-        validated_prompt["template"] = template
-    if version is not None:
-        if not isinstance(version, str):
-            raise TypeError("Prompt version must be a string.")
-        validated_prompt["version"] = version
+
     if prompt_id is not None:
         if not isinstance(prompt_id, str):
             raise TypeError("Prompt id must be a string.")
         validated_prompt["id"] = prompt_id
+
+    if name is not None:
+        if not isinstance(name, str):
+            raise TypeError("Prompt name must be a string.")
+        validated_prompt["name"] = name
+    elif prompt_id is not None:
+        validated_prompt["name"] = prompt_id
+    else:
+        validated_prompt["name"] = "unnamed_prompt"
+
+    if version is not None:
+        semver_regex = (
+            r"^(?P<major>0|[1-9]\d*)\."
+            r"(?P<minor>0|[1-9]\d*)\."
+            r"(?P<patch>0|[1-9]\d*)"
+            r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-]"
+            r"[0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-]"
+            r"[0-9a-zA-Z-]*))*))?"
+            r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+"
+            r"(?:\.[0-9a-zA-Z-]+)*))?$"
+        )
+        if not bool(match(semver_regex, version)):
+            raise TypeError(
+                "Prompt version must be semver compatible. Please check https://semver.org/ for more information."
+            )
+        # Add minor and patch version if not present
+        version_parts = (version.split(".") + ["0", "0"])[:3]
+        version = ".".join(version_parts)
+        validated_prompt["version"] = version
+    else:
+        validated_prompt["version"] = "1.0.0"
+
+    if variables is not None:
+        if not isinstance(variables, dict):
+            raise TypeError("Prompt variables must be a dictionary.")
+        if not any(isinstance(k, str) for k in variables):
+            raise TypeError("Prompt variable keys must be strings.")
+        # check if values are json serializable
+        if not all(isinstance(v, (str, int, float, bool, list, dict)) for v in variables.values()):
+            raise TypeError("Prompt variable values must be JSON serializable.")
+        validated_prompt["variables"] = variables
+
+    if template is not None:
+        if isinstance(template, str):
+            template = [("user", template)]
+        # check if template is a list of tuples of 2 strings
+        if (
+            not isinstance(template, list)
+            or not all(isinstance(t, tuple) for t in template)
+            or not all(len(t) == 2 for t in template)
+            or not all(isinstance(t, str) for t in template)
+        ):
+            raise TypeError("Prompt template must be a list of 2-tuples (role,content).")
+        validated_prompt["template"] = template
+
+    if example_variable_keys is not None:
+        if not isinstance(example_variable_keys, list) or not all(isinstance(k, str) for k in example_variable_keys):
+            raise TypeError("Prompt field `example_variables` must be a list of strings.")
+        validated_prompt["example_variable_keys"] = example_variable_keys
+    elif "examples" in variables:
+        validated_prompt["example_variable_keys"] = ["examples"]
+
+    if constraint_variable_keys is not None:
+        if not isinstance(constraint_variable_keys, list):
+            raise TypeError("Prompt field `constraint_variables` must be a list of strings.")
+        if not all(isinstance(k, str) for k in constraint_variable_keys):
+            raise TypeError("Prompt field `constraint_variables` must be a list of strings.")
+        validated_prompt["constraint_variable_keys"] = constraint_variable_keys
+    elif "constraints" in variables:
+        validated_prompt["constraint_variable_keys"] = ["constraints"]
+
     if ctx_variable_keys is not None:
         if not isinstance(ctx_variable_keys, list):
             raise TypeError("Prompt field `context_variable_keys` must be a list of strings.")
@@ -59,6 +126,7 @@ def validate_prompt(prompt: dict) -> Dict[str, Union[str, dict, List[str]]]:
         validated_prompt[INTERNAL_CONTEXT_VARIABLE_KEYS] = ctx_variable_keys
     else:
         validated_prompt[INTERNAL_CONTEXT_VARIABLE_KEYS] = ["context"]
+
     if rag_query_variable_keys is not None:
         if not isinstance(rag_query_variable_keys, list):
             raise TypeError("Prompt field `rag_query_variables` must be a list of strings.")
@@ -67,7 +135,37 @@ def validate_prompt(prompt: dict) -> Dict[str, Union[str, dict, List[str]]]:
         validated_prompt[INTERNAL_QUERY_VARIABLE_KEYS] = rag_query_variable_keys
     else:
         validated_prompt[INTERNAL_QUERY_VARIABLE_KEYS] = ["question"]
+
+    # Compute prompt ids
+    ids = _compute_prompt_ids(validated_prompt, "prompt-tracking-sandbox")
+    validated_prompt["prompt_template_id"] = ids["prompt_template_id"]
+    validated_prompt["prompt_instance_id"] = ids["prompt_instance_id"]
+
     return validated_prompt
+
+
+def _compute_prompt_ids(validated_prompt: dict, ml_app: str) -> dict:
+    ids = dict()
+    name = validated_prompt.get("name")
+    variables = validated_prompt.get("variables")
+    template = validated_prompt.get("template")
+    version = validated_prompt.get("version")
+    prompt_id = validated_prompt.get("id")
+    example_variable_keys = validated_prompt.get("example_variables")
+    constraint_variable_keys = validated_prompt.get("constraint_variables")
+    ctx_variable_keys = validated_prompt.get("rag_context_variables")
+    rag_query_variable_keys = validated_prompt.get("rag_query_variables")
+
+    template_id_str = f"[{ml_app}]{prompt_id}"
+    instance_id_str = (f"[{ml_app}]{prompt_id}"
+                       f"{name}{prompt_id}{version}{template}{variables}"
+                       f"{example_variable_keys}{constraint_variable_keys}"
+                       f"{ctx_variable_keys}{rag_query_variable_keys}")
+
+    ids["prompt_template_id"] = sha1(template_id_str.encode()).hexdigest()
+    ids["prompt_instance_id"] = sha1(instance_id_str.encode()).hexdigest()
+
+    return ids
 
 
 class LinkTracker:
