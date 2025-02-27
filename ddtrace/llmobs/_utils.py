@@ -137,7 +137,7 @@ def validate_prompt(prompt: dict) -> Dict[str, Union[str, Dict[str, Any], List[s
         validated_prompt[INTERNAL_QUERY_VARIABLE_KEYS] = ["question"]
 
     # Compute prompt ids
-    ids = _compute_prompt_ids(validated_prompt, "prompt-tracking-sandbox")
+    ids = _compute_prompt_ids(validated_prompt, ml_app)
     validated_prompt["prompt_template_id"] = ids["prompt_template_id"]
     validated_prompt["prompt_instance_id"] = ids["prompt_instance_id"]
 

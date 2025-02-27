@@ -859,7 +859,7 @@ class LLMObs(Service):
             span.name = _name
         if prompt is not None:
             try:
-                validated_prompt = validate_prompt(prompt)
+                validated_prompt = validate_prompt(prompt, _get_ml_app(span))
                 cls._set_dict_attribute(span, INPUT_PROMPT, validated_prompt)
             except TypeError:
                 log.warning("Failed to validate prompt with error: ", exc_info=True)
