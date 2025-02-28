@@ -12,6 +12,7 @@ from ddtrace import config
 from ddtrace.ext import SpanTypes
 from ddtrace.internal.logger import get_logger
 from ddtrace.llmobs._constants import GEMINI_APM_SPAN_NAME
+from ddtrace.llmobs._constants import DEFAULT_PROMPT_NAME
 from ddtrace.llmobs._constants import INTERNAL_CONTEXT_VARIABLE_KEYS
 from ddtrace.llmobs._constants import INTERNAL_QUERY_VARIABLE_KEYS
 from ddtrace.llmobs._constants import IS_EVALUATION_SPAN
@@ -43,11 +44,6 @@ def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[st
     ctx_variable_keys = prompt.get("rag_context_variables")
     rag_query_variable_keys = prompt.get("rag_query_variables")
 
-    if prompt_id is not None:
-        if not isinstance(prompt_id, str):
-            raise TypeError("Prompt id must be a string.")
-        validated_prompt["id"] = prompt_id
-
     if name is not None:
         if not isinstance(name, str):
             raise TypeError("Prompt name must be a string.")
@@ -55,7 +51,7 @@ def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[st
     elif prompt_id is not None:
         validated_prompt["name"] = prompt_id
     else:
-        validated_prompt["name"] = "unnamed_prompt"
+        validated_prompt["name"] = DEFAULT_PROMPT_NAME
 
     if version is not None:
         semver_regex = (
@@ -68,8 +64,10 @@ def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[st
             r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+"
             r"(?:\.[0-9a-zA-Z-]+)*))?$"
         )
+        if not isinstance(version, str):
+            raise TypeError("Prompt version must be a string.")
         if not bool(match(semver_regex, version)):
-            raise TypeError(
+            log.warning(
                 "Prompt version must be semver compatible. Please check https://semver.org/ for more information."
             )
         # Add minor and patch version if not present
@@ -97,7 +95,7 @@ def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[st
             not isinstance(template, list)
             or not all(isinstance(t, tuple) for t in template)
             or not all(len(t) == 2 for t in template)
-            or not all(isinstance(t, str) for t in template)
+            or not all(isinstance(t[0], str) and isinstance(t[1], str) for t in template)
         ):
             raise TypeError("Prompt template must be a list of 2-tuples (role,content).")
         validated_prompt["template"] = template
@@ -136,16 +134,22 @@ def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[st
     else:
         validated_prompt[INTERNAL_QUERY_VARIABLE_KEYS] = ["question"]
 
-    # Compute prompt ids
-    ids = _compute_prompt_ids(validated_prompt, ml_app)
-    validated_prompt["prompt_template_id"] = ids["prompt_template_id"]
-    validated_prompt["prompt_instance_id"] = ids["prompt_instance_id"]
+    if prompt_id is not None:
+        if not isinstance(prompt_id, str):
+            raise TypeError("Prompt ID must be a string.")
+        validated_prompt["id"] = prompt_id
+    else:
+        log.warning("Prompt ID is not provided. The prompt ID will be generated based on the prompt name.")
+        if name is not None:
+            validated_prompt["id"] = name or DEFAULT_PROMPT_NAME
+
+    # Compute prompt instance id
+    validated_prompt["prompt_instance_id"] = _get_prompt_instance_id(validated_prompt, ml_app)
 
     return validated_prompt
 
 
-def _compute_prompt_ids(validated_prompt: dict, ml_app: str) -> dict:
-    ids = dict()
+def _get_prompt_instance_id(validated_prompt: dict, ml_app: str) -> str:
     name = validated_prompt.get("name")
     variables = validated_prompt.get("variables")
     template = validated_prompt.get("template")
@@ -156,16 +160,14 @@ def _compute_prompt_ids(validated_prompt: dict, ml_app: str) -> dict:
     ctx_variable_keys = validated_prompt.get("rag_context_variables")
     rag_query_variable_keys = validated_prompt.get("rag_query_variables")
 
-    template_id_str = f"[{ml_app}]{prompt_id}"
     instance_id_str = (f"[{ml_app}]{prompt_id}"
                        f"{name}{prompt_id}{version}{template}{variables}"
                        f"{example_variable_keys}{constraint_variable_keys}"
                        f"{ctx_variable_keys}{rag_query_variable_keys}")
 
-    ids["prompt_template_id"] = sha1(template_id_str.encode()).hexdigest()
-    ids["prompt_instance_id"] = sha1(instance_id_str.encode()).hexdigest()
+    prompt_instance_id = sha1(instance_id_str.encode()).hexdigest()
 
-    return ids
+    return prompt_instance_id
 
 
 class LinkTracker:
