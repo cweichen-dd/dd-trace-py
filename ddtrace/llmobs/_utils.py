@@ -140,8 +140,7 @@ def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[st
         validated_prompt["id"] = prompt_id
     else:
         log.warning("Prompt ID is not provided. The prompt ID will be generated based on the prompt name.")
-        if name is not None:
-            validated_prompt["id"] = name or DEFAULT_PROMPT_NAME
+        validated_prompt["id"] = f"{ml_app}-{name or DEFAULT_PROMPT_NAME}"
 
     # Compute prompt instance id
     validated_prompt["prompt_instance_id"] = _get_prompt_instance_id(validated_prompt, ml_app)
