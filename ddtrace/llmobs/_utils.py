@@ -28,8 +28,8 @@ from ddtrace.trace import Span
 log = get_logger(__name__)
 
 
-def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[str, Any], List[str], List[Tuple[str, str]]]]:
-    validated_prompt = {}  # type: Dict[str, Union[str, Dict[str,Any], List[str], List[Tuple[str, str]]]]
+def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]]]]:
+    validated_prompt = {}  # type: Dict[str, Union[str, Dict[str,Any], List[str], List[Dict[str, str]]]]
 
     if not isinstance(prompt, dict):
         raise TypeError("Prompt must be a dictionary")
@@ -88,6 +88,7 @@ def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[st
         validated_prompt["variables"] = variables
 
     if template is not None:
+        # accept a single string as a template
         if isinstance(template, str):
             template = [("user", template)]
         # check if template is a list of tuples of 2 strings
@@ -98,7 +99,11 @@ def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[st
             or not all(isinstance(t[0], str) and isinstance(t[1], str) for t in template)
         ):
             raise TypeError("Prompt template must be a list of 2-tuples (role,content).")
-        validated_prompt["template"] = template
+        # transform template into messages structure
+        messages = []
+        for t in template:
+            messages.append({"role": t[0], "content": t[1]})
+        validated_prompt["template"] = messages
 
     if example_variable_keys is not None:
         if not isinstance(example_variable_keys, list) or not all(isinstance(k, str) for k in example_variable_keys):
