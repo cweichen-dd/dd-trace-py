@@ -1313,6 +1313,10 @@ class LLMObs(Service):
                         constraint_variables= constraint_variable_keys,
                         rag_context_variables= rag_context_variable_keys,
                         rag_query_variables= rag_query_variable_keys)
+        if id is None:
+            raise ValueError("Prompt id is required")
+        if template is None:
+            raise ValueError("Prompt template is required")
         return cls.annotation_context(prompt=prompt)
 
 
