@@ -41,7 +41,8 @@ class Prompt(TypedDict, total=False):
     name: str
     version: str
     id: str
-    template: Union[str, List[Tuple[str, str]]]
+    template: str
+    chat_template: Union[List[Tuple[str, str]], List[Message]]
     variables: Dict[str, str]
     example_variables: List[str]
     constraint_variables: List[str]

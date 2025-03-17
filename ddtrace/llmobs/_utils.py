@@ -22,14 +22,16 @@ from ddtrace.llmobs._constants import NAME
 from ddtrace.llmobs._constants import OPENAI_APM_SPAN_NAME
 from ddtrace.llmobs._constants import SESSION_ID
 from ddtrace.llmobs._constants import VERTEXAI_APM_SPAN_NAME
+from ddtrace.llmobs.utils import Message
+from ddtrace.llmobs.utils import Prompt
 from ddtrace.trace import Span
 
 
 log = get_logger(__name__)
 
 
-def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]]]]:
-    validated_prompt = {}  # type: Dict[str, Union[str, Dict[str,Any], List[str], List[Dict[str, str]]]]
+def validate_prompt(prompt: Prompt, ml_app:str="") -> Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Message]]]:
+    validated_prompt = {}
 
     if not isinstance(prompt, dict):
         raise TypeError("Prompt must be a dictionary")
@@ -37,6 +39,7 @@ def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[st
     name = prompt.get("name")
     variables = prompt.get("variables")
     template = prompt.get("template")
+    chat_template = prompt.get("chat_template")
     version = prompt.get("version")
     prompt_id = prompt.get("id")
     example_variable_keys = prompt.get("example_variables")
@@ -88,22 +91,28 @@ def validate_prompt(prompt: dict, ml_app:str="") -> Dict[str, Union[str, Dict[st
         validated_prompt["variables"] = variables
 
     if template is not None:
-        # accept a single string as a template
-        if isinstance(template, str):
-            template = [("user", template)]
-        # check if template is a list of tuples of 2 strings
-        if (
-            not isinstance(template, list)
-            or not all(isinstance(t, tuple) for t in template)
-            or not all(len(t) == 2 for t in template)
-            or not all(isinstance(t[0], str) and isinstance(t[1], str) for t in template)
-        ):
-            raise TypeError("Prompt template must be a list of 2-tuples (role,content).")
-        # transform template into messages structure
-        messages = []
-        for t in template:
-            messages.append({"role": t[0], "content": t[1]})
-        validated_prompt["template"] = messages
+        if not isinstance(template, str):
+            raise TypeError("Prompt template must be a string")
+        validated_prompt["template"] = template
+
+    if chat_template is not None:
+        validated_chat_template = []
+        # accept a single message as a chat template
+        if isinstance(chat_template, Message):
+            validated_chat_template.append(chat_template)
+        elif isinstance(chat_template, list):
+            for message in chat_template:
+                # accept a list of messages as a chat template
+                if isinstance(message, Message):
+                    validated_chat_template.append(message)
+                # check if chat_template is a list of tuples of 2 strings and transform into messages structure
+                elif isinstance(message, tuple) and len(message) == 2 and all(isinstance(t, str) for t in message):
+                    validated_chat_template.append({"role": message[0], "content": message[1]})
+                else:
+                    raise TypeError("Prompt chat_template entry must be a Message or a 2-tuple (role,content).")
+        else :
+            raise TypeError("Prompt chat_template must be a list of Message objects or a list of 2-tuples (role,content).")
+        validated_prompt["chat_template"] = validated_chat_template
 
     if example_variable_keys is not None:
         if not isinstance(example_variable_keys, list) or not all(isinstance(k, str) for k in example_variable_keys):
@@ -157,6 +166,7 @@ def _get_prompt_instance_id(validated_prompt: dict, ml_app: str) -> str:
     name = validated_prompt.get("name")
     variables = validated_prompt.get("variables")
     template = validated_prompt.get("template")
+    chat_template = validated_prompt.get("chat_template")
     version = validated_prompt.get("version")
     prompt_id = validated_prompt.get("id")
     example_variable_keys = validated_prompt.get("example_variables")
@@ -165,7 +175,7 @@ def _get_prompt_instance_id(validated_prompt: dict, ml_app: str) -> str:
     rag_query_variable_keys = validated_prompt.get("rag_query_variables")
 
     instance_id_str = (f"[{ml_app}]{prompt_id}"
-                       f"{name}{prompt_id}{version}{template}{variables}"
+                       f"{name}{prompt_id}{version}{template}{chat_template}{variables}"
                        f"{example_variable_keys}{constraint_variable_keys}"
                        f"{ctx_variable_keys}{rag_query_variable_keys}")
 
