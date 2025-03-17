@@ -608,6 +608,7 @@ class LLMObs(Service):
         self,
         operation_kind: str,
         name: Optional[str] = None,
+        prompt: Optional[Prompt] = None,
         session_id: Optional[str] = None,
         model_name: Optional[str] = None,
         model_provider: Optional[str] = None,
@@ -636,6 +637,9 @@ class LLMObs(Service):
             span._set_ctx_item(SESSION_ID, session_id)
         if ml_app is None:
             ml_app = _get_ml_app(span)
+        if prompt is not None:
+            validated_prompt = validate_prompt(prompt)
+            span._set_ctx_item(INPUT_PROMPT, validated_prompt)
         span._set_ctx_item(ML_APP, ml_app)
         return span
 
@@ -644,6 +648,7 @@ class LLMObs(Service):
         cls,
         model_name: Optional[str] = None,
         name: Optional[str] = None,
+        prompt: Optional[Prompt] = None,
         model_provider: Optional[str] = None,
         session_id: Optional[str] = None,
         ml_app: Optional[str] = None,
@@ -668,7 +673,7 @@ class LLMObs(Service):
         if model_provider is None:
             model_provider = "custom"
         return cls._instance._start_span(
-            "llm", name, model_name=model_name, model_provider=model_provider, session_id=session_id, ml_app=ml_app
+            "llm", name, prompt=prompt, model_name=model_name, model_provider=model_provider, session_id=session_id, ml_app=ml_app
         )
 
     @classmethod
