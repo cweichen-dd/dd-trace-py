@@ -151,14 +151,11 @@ def _get_prompt_instance_id(validated_prompt: dict, ml_app: str) -> str:
     chat_template = validated_prompt.get("chat_template")
     version = validated_prompt.get("version")
     prompt_id = validated_prompt.get("id")
-    example_variable_keys = validated_prompt.get("example_variables")
-    constraint_variable_keys = validated_prompt.get("constraint_variables")
     ctx_variable_keys = validated_prompt.get("rag_context_variables")
     rag_query_variable_keys = validated_prompt.get("rag_query_variables")
 
     instance_id_str = (f"[{ml_app}]{prompt_id}"
                        f"{name}{prompt_id}{version}{template}{chat_template}{variables}"
-                       f"{example_variable_keys}{constraint_variable_keys}"
                        f"{ctx_variable_keys}{rag_query_variable_keys}")
 
     prompt_instance_id = sha1(instance_id_str.encode()).hexdigest()
