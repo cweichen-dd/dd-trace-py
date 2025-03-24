@@ -70,3 +70,6 @@ NAME = "_ml_obs.name"
 
 # Prompt constants
 DEFAULT_PROMPT_NAME = "unnamed_prompt"
+
+DECORATOR = "_ml_obs.decorator"
+INTEGRATION = "_ml_obs.integration"
