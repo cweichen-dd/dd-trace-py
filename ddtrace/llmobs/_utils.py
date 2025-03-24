@@ -30,7 +30,7 @@ from ddtrace.trace import Span
 log = get_logger(__name__)
 
 
-def validate_prompt(prompt: Prompt, ml_app:str="") -> Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Message]]]:
+def validate_prompt(prompt: Prompt, ml_app:str="", strict_validation=True) -> Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Message]]]:
     validated_prompt = {}
 
     if not isinstance(prompt, dict):
@@ -45,6 +45,10 @@ def validate_prompt(prompt: Prompt, ml_app:str="") -> Dict[str, Union[str, Dict[
     ctx_variable_keys = prompt.get("rag_context_variables")
     rag_query_variable_keys = prompt.get("rag_query_variables")
 
+    if strict_validation:
+        if template is None and chat_template is None:
+            raise ValueError("Prompt must have a template or chat template.")
+
     if name is not None:
         if not isinstance(name, str):
             raise TypeError("Prompt name must be a string.")
@@ -53,6 +57,16 @@ def validate_prompt(prompt: Prompt, ml_app:str="") -> Dict[str, Union[str, Dict[
         validated_prompt["name"] = prompt_id
     else:
         validated_prompt["name"] = DEFAULT_PROMPT_NAME
+
+    if prompt_id is None:
+        if strict_validation:
+            raise ValueError("Prompt ID is not provided.")
+        log.warning("Prompt ID is not provided. The prompt ID will be generated based on the prompt name.")
+        validated_prompt["id"] = f"{ml_app}-{name or DEFAULT_PROMPT_NAME}"
+    elif not isinstance(prompt_id, str):
+        raise TypeError("Prompt ID must be a string.")
+    else:
+        validated_prompt["id"] = prompt_id
 
     if version is not None:
         semver_regex = (
@@ -68,9 +82,12 @@ def validate_prompt(prompt: Prompt, ml_app:str="") -> Dict[str, Union[str, Dict[
         if not isinstance(version, str):
             raise TypeError("Prompt version must be a string.")
         if not bool(match(semver_regex, version)):
-            log.warning(
-                "Prompt version must be semver compatible. Please check https://semver.org/ for more information."
-            )
+            if strict_validation:
+                raise ValueError("Prompt version must be semver compatible.")
+            else :
+                log.warning(
+                    "Prompt version must be semver compatible. Please check https://semver.org/ for more information."
+                )
         # Add minor and patch version if not present
         version_parts = (version.split(".") + ["0", "0"])[:3]
         version = ".".join(version_parts)
@@ -88,12 +105,13 @@ def validate_prompt(prompt: Prompt, ml_app:str="") -> Dict[str, Union[str, Dict[
             raise TypeError("Prompt variable values must be JSON serializable.")
         validated_prompt["variables"] = variables
 
-    if template is not None:
+    if strict_validation and (template is None and chat_template is None):
+        raise ValueError("Prompt must have a template or chat template.")
+    elif template:
         if not isinstance(template, str):
             raise TypeError("Prompt template must be a string")
         validated_prompt["template"] = template
-
-    if chat_template is not None:
+    elif chat_template:
         validated_chat_template = []
         # accept a single message as a chat template
         if isinstance(chat_template, Message):
@@ -129,14 +147,6 @@ def validate_prompt(prompt: Prompt, ml_app:str="") -> Dict[str, Union[str, Dict[
         validated_prompt[INTERNAL_QUERY_VARIABLE_KEYS] = rag_query_variable_keys
     else:
         validated_prompt[INTERNAL_QUERY_VARIABLE_KEYS] = ["question"]
-
-    if prompt_id is not None:
-        if not isinstance(prompt_id, str):
-            raise TypeError("Prompt ID must be a string.")
-        validated_prompt["id"] = prompt_id
-    else:
-        log.warning("Prompt ID is not provided. The prompt ID will be generated based on the prompt name.")
-        validated_prompt["id"] = f"{ml_app}-{name or DEFAULT_PROMPT_NAME}"
 
     # Compute prompt instance id
     validated_prompt["prompt_instance_id"] = _get_prompt_instance_id(validated_prompt, ml_app)

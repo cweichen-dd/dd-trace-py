@@ -634,7 +634,7 @@ class LLMObs(Service):
         if ml_app is None:
             ml_app = _get_ml_app(span)
         if prompt is not None:
-            validated_prompt = validate_prompt(prompt)
+            validated_prompt = validate_prompt(prompt, ml_app)
             span._set_ctx_item(INPUT_PROMPT, validated_prompt)
         span._set_ctx_item(ML_APP, ml_app)
         return span
@@ -872,7 +872,7 @@ class LLMObs(Service):
             span.name = _name
         if prompt is not None:
             try:
-                validated_prompt = validate_prompt(prompt, _get_ml_app(span))
+                validated_prompt = validate_prompt(prompt, _get_ml_app(span), strict_validation=False)
                 cls._set_dict_attribute(span, INPUT_PROMPT, validated_prompt)
             except TypeError:
                 log.warning("Failed to validate prompt with error: ", exc_info=True)
