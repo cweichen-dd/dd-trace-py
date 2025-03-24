@@ -11,8 +11,8 @@ from typing import Union
 from ddtrace import config
 from ddtrace.ext import SpanTypes
 from ddtrace.internal.logger import get_logger
-from ddtrace.llmobs._constants import GEMINI_APM_SPAN_NAME
 from ddtrace.llmobs._constants import DEFAULT_PROMPT_NAME
+from ddtrace.llmobs._constants import GEMINI_APM_SPAN_NAME
 from ddtrace.llmobs._constants import INTERNAL_CONTEXT_VARIABLE_KEYS
 from ddtrace.llmobs._constants import INTERNAL_QUERY_VARIABLE_KEYS
 from ddtrace.llmobs._constants import IS_EVALUATION_SPAN
@@ -30,7 +30,9 @@ from ddtrace.trace import Span
 log = get_logger(__name__)
 
 
-def validate_prompt(prompt: Prompt, ml_app:str="", strict_validation=True) -> Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Message]]]:
+def validate_prompt(
+    prompt: Prompt, ml_app: str = "", strict_validation=True
+) -> Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Message]]]:
     validated_prompt = {}
 
     if not isinstance(prompt, dict):
@@ -84,7 +86,7 @@ def validate_prompt(prompt: Prompt, ml_app:str="", strict_validation=True) -> Di
         if not bool(match(semver_regex, version)):
             if strict_validation:
                 raise ValueError("Prompt version must be semver compatible.")
-            else :
+            else:
                 log.warning(
                     "Prompt version must be semver compatible. Please check https://semver.org/ for more information."
                 )
@@ -122,12 +124,14 @@ def validate_prompt(prompt: Prompt, ml_app:str="", strict_validation=True) -> Di
                 if isinstance(message, Message):
                     validated_chat_template.append(message)
                 # check if chat_template is a list of tuples of 2 strings and transform into messages structure
-                elif isinstance(message, tuple) and len(message) == 2 and all(isinstance(t, str) for t in message):
+                elif isinstance(message, Tuple) and len(message) == 2 and all(isinstance(t, str) for t in message):
                     validated_chat_template.append({"role": message[0], "content": message[1]})
                 else:
                     raise TypeError("Prompt chat_template entry must be a Message or a 2-tuple (role,content).")
-        else :
-            raise TypeError("Prompt chat_template must be a list of Message objects or a list of 2-tuples (role,content).")
+        else:
+            raise TypeError(
+                "Prompt chat_template must be a list of Message objects or a list of 2-tuples (role,content)."
+            )
         validated_prompt["chat_template"] = validated_chat_template
 
     if ctx_variable_keys is not None:
@@ -164,9 +168,11 @@ def _get_prompt_instance_id(validated_prompt: dict, ml_app: str) -> str:
     ctx_variable_keys = validated_prompt.get("rag_context_variables")
     rag_query_variable_keys = validated_prompt.get("rag_query_variables")
 
-    instance_id_str = (f"[{ml_app}]{prompt_id}"
-                       f"{name}{prompt_id}{version}{template}{chat_template}{variables}"
-                       f"{ctx_variable_keys}{rag_query_variable_keys}")
+    instance_id_str = (
+        f"[{ml_app}]{prompt_id}"
+        f"{name}{prompt_id}{version}{template}{chat_template}{variables}"
+        f"{ctx_variable_keys}{rag_query_variable_keys}"
+    )
 
     instance_id = sha1(instance_id_str.encode()).hexdigest()
 
