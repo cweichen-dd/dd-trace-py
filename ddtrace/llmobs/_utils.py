@@ -149,7 +149,7 @@ def validate_prompt(prompt: Prompt, ml_app:str="", strict_validation=True) -> Di
         validated_prompt[INTERNAL_QUERY_VARIABLE_KEYS] = ["question"]
 
     # Compute prompt instance id
-    validated_prompt["prompt_instance_id"] = _get_prompt_instance_id(validated_prompt, ml_app)
+    validated_prompt["instance_id"] = _get_prompt_instance_id(validated_prompt, ml_app)
 
     return validated_prompt
 
@@ -168,9 +168,9 @@ def _get_prompt_instance_id(validated_prompt: dict, ml_app: str) -> str:
                        f"{name}{prompt_id}{version}{template}{chat_template}{variables}"
                        f"{ctx_variable_keys}{rag_query_variable_keys}")
 
-    prompt_instance_id = sha1(instance_id_str.encode()).hexdigest()
+    instance_id = sha1(instance_id_str.encode()).hexdigest()
 
-    return prompt_instance_id
+    return instance_id
 
 
 class LinkTracker:
