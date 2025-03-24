@@ -476,10 +476,6 @@ class LLMObs(Service):
                         Can also be set using the `ddtrace.llmobs.utils.Prompt` constructor class.
                         - This argument is only applicable to LLM spans.
                         - The dictionary may contain optional keys relevant to Templates and RAG applications:
-                            `example_variable_keys` - a list of variable key names that contain
-                                                        example information
-                            `constraint_variable_keys` - a list of variable key names that contain
-                                                        constraint information
                             `rag_context_variables` - a list of variable key names that contain ground
                                                         truth context information
                             `rag_query_variables` - a list of variable key names that contains query
@@ -1304,8 +1300,6 @@ class LLMObs(Service):
         template: Optional[str]=None,
         chat_template: Optional[List[Union[Tuple[str, str],Message]]]=None,
         variables: Optional[Dict[str, Any]]=None,
-        example_variable_keys: Optional[List[str]]=None,
-        constraint_variable_keys: Optional[List[str]]=None,
         rag_context_variable_keys: Optional[List[str]]=None,
         rag_query_variable_keys: Optional[List[str]]=None) -> AnnotationContext:
         """
@@ -1318,8 +1312,6 @@ class LLMObs(Service):
                         template= template,
                         chat_template= chat_template,
                         variables= variables,
-                        example_variables= example_variable_keys,
-                        constraint_variables= constraint_variable_keys,
                         rag_context_variables= rag_context_variable_keys,
                         rag_query_variables= rag_query_variable_keys)
         if id is None:

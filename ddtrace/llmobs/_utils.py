@@ -42,8 +42,6 @@ def validate_prompt(prompt: Prompt, ml_app:str="") -> Dict[str, Union[str, Dict[
     chat_template = prompt.get("chat_template")
     version = prompt.get("version")
     prompt_id = prompt.get("id")
-    example_variable_keys = prompt.get("example_variables")
-    constraint_variable_keys = prompt.get("constraint_variables")
     ctx_variable_keys = prompt.get("rag_context_variables")
     rag_query_variable_keys = prompt.get("rag_query_variables")
 
@@ -113,22 +111,6 @@ def validate_prompt(prompt: Prompt, ml_app:str="") -> Dict[str, Union[str, Dict[
         else :
             raise TypeError("Prompt chat_template must be a list of Message objects or a list of 2-tuples (role,content).")
         validated_prompt["chat_template"] = validated_chat_template
-
-    if example_variable_keys is not None:
-        if not isinstance(example_variable_keys, list) or not all(isinstance(k, str) for k in example_variable_keys):
-            raise TypeError("Prompt field `example_variables` must be a list of strings.")
-        validated_prompt["example_variable_keys"] = example_variable_keys
-    elif "examples" in variables:
-        validated_prompt["example_variable_keys"] = ["examples"]
-
-    if constraint_variable_keys is not None:
-        if not isinstance(constraint_variable_keys, list):
-            raise TypeError("Prompt field `constraint_variables` must be a list of strings.")
-        if not all(isinstance(k, str) for k in constraint_variable_keys):
-            raise TypeError("Prompt field `constraint_variables` must be a list of strings.")
-        validated_prompt["constraint_variable_keys"] = constraint_variable_keys
-    elif "constraints" in variables:
-        validated_prompt["constraint_variable_keys"] = ["constraints"]
 
     if ctx_variable_keys is not None:
         if not isinstance(ctx_variable_keys, list):

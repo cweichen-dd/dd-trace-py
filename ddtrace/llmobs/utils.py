@@ -44,8 +44,6 @@ class Prompt(TypedDict, total=False):
     template: str
     chat_template: Union[List[Tuple[str, str]], List[Message]]
     variables: Dict[str, str]
-    example_variables: List[str]
-    constraint_variables: List[str]
     rag_context_variables: List[str]
     rag_query_variables: List[str]
 
