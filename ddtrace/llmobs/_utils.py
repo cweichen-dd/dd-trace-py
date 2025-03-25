@@ -5,7 +5,6 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Tuple
 from typing import Union
 
 from ddtrace import config
@@ -22,6 +21,7 @@ from ddtrace.llmobs._constants import NAME
 from ddtrace.llmobs._constants import OPENAI_APM_SPAN_NAME
 from ddtrace.llmobs._constants import SESSION_ID
 from ddtrace.llmobs._constants import VERTEXAI_APM_SPAN_NAME
+from ddtrace.llmobs.utils import Message
 from ddtrace.llmobs.utils import Prompt
 from ddtrace.trace import Span
 
@@ -30,9 +30,11 @@ log = get_logger(__name__)
 
 
 def validate_prompt(
-    prompt: Prompt, ml_app: str = "", strict_validation=True
-) -> Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Dict[str, str]]]]:
-    validated_prompt = {}
+    prompt: Union[Dict[Any, Any], Prompt], ml_app: str = "", strict_validation=True
+) -> Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Dict[str, str]], List[Message]]]:
+    validated_prompt: Dict[
+        str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Dict[str, str]], List[Message]]
+    ] = {}
 
     if not isinstance(prompt, dict):
         raise TypeError("Prompt must be a dictionary")
@@ -113,18 +115,18 @@ def validate_prompt(
             raise TypeError("Prompt template must be a string")
         validated_prompt["template"] = template
     elif chat_template:
-        validated_chat_template = []
+        validated_chat_template: List[Message] = []
         # accept a single message as a chat template
         if isinstance(chat_template, dict) and all(k in chat_template for k in ["role", "content"]):
-            validated_chat_template.append(chat_template)
+            validated_chat_template.append(Message(content=chat_template["content"], role=chat_template["role"]))
         elif isinstance(chat_template, list):
             for message in chat_template:
                 # accept a list of messages as a chat template
                 if isinstance(message, dict) and all((k == "role" or k == "content") for k in message):
-                    validated_chat_template.append(message)
+                    validated_chat_template.append(Message(content=message["content"], role=message["role"]))
                 # check if chat_template is a list of tuples of 2 strings and transform into messages structure
-                elif isinstance(message, Tuple) and len(message) == 2 and all(isinstance(t, str) for t in message):
-                    validated_chat_template.append({"role": message[0], "content": message[1]})
+                elif isinstance(message, tuple) and len(message) == 2 and all(isinstance(t, str) for t in message):
+                    validated_chat_template.append(Message(content=message[1], role=message[0]))
                 else:
                     raise TypeError("Prompt chat_template entry must be a Message or a 2-tuple (role,content).")
         else:

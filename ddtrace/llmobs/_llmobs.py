@@ -473,7 +473,10 @@ class LLMObs(Service):
 
     @classmethod
     def annotation_context(
-        cls, tags: Optional[Dict[str, Any]] = None, prompt: Optional[dict] = None, name: Optional[str] = None
+        cls,
+        tags: Optional[Dict[str, Any]] = None,
+        prompt: Optional[Union[dict, Prompt]] = None,
+        name: Optional[str] = None,
     ) -> AnnotationContext:
         """
         Sets specified attributes on all LLMObs spans created while the returned AnnotationContext is active.
@@ -1427,10 +1430,10 @@ class LLMObs(Service):
     def prompt_context(
         cls,
         name: str,
-        version: Optional[str] = "1.0.0",
+        version: str = "1.0.0",
         prompt_id: Optional[str] = None,
         template: Optional[str] = None,
-        chat_template: Optional[List[Union[Tuple[str, str], Message]]] = None,
+        chat_template: Optional[Union[List[Tuple[str, str]], List[Message]]] = None,
         variables: Optional[Dict[str, Any]] = None,
         rag_context_variable_keys: Optional[List[str]] = None,
         rag_query_variable_keys: Optional[List[str]] = None,

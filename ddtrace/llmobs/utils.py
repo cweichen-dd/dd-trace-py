@@ -1,5 +1,6 @@
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Tuple
 from typing import Union
 
@@ -39,13 +40,13 @@ class Prompt(TypedDict, total=False):
     """
 
     name: str
-    version: str
-    id: str
-    template: str
-    chat_template: Union[List[Tuple[str, str]], List[Message]]
-    variables: Dict[str, str]
-    rag_context_variables: List[str]
-    rag_query_variables: List[str]
+    version: Optional[str]
+    id: Optional[str]
+    template: Optional[str]
+    chat_template: Optional[Union[List[Tuple[str, str]], List[Message]]]
+    variables: Optional[Dict[str, str]]
+    rag_context_variables: Optional[List[str]]
+    rag_query_variables: Optional[List[str]]
 
 
 class Messages:
