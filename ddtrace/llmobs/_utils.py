@@ -87,12 +87,12 @@ def validate_prompt(
     elif not isinstance(version, str):
         raise TypeError("Prompt version must be a string.")
     elif not bool(match(semver_regex, version)):
-            if strict_validation:
-                raise ValueError("Prompt version must be semver compatible.")
-            else:
-                log.warning(
-                    "Prompt version must be semver compatible. Please check https://semver.org/ for more information."
-                )
+        if strict_validation:
+            raise ValueError("Prompt version must be semver compatible.")
+        else:
+            log.warning(
+                "Prompt version must be semver compatible. Please check https://semver.org/ for more information."
+            )
     else:
         # Add minor and patch version if not present
         version_parts = (version.split(".") + ["0", "0"])[:3]
