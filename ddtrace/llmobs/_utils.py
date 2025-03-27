@@ -71,32 +71,33 @@ def validate_prompt(
     else:
         validated_prompt["id"] = prompt_id
 
-    if version is not None:
-        semver_regex = (
-            r"^(?P<major>0|[1-9]\d*)\."
-            r"(?P<minor>0|[1-9]\d*)\."
-            r"(?P<patch>0|[1-9]\d*)"
-            r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-]"
-            r"[0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-]"
-            r"[0-9a-zA-Z-]*))*))?"
-            r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+"
-            r"(?:\.[0-9a-zA-Z-]+)*))?$"
-        )
-        if not isinstance(version, str):
-            raise TypeError("Prompt version must be a string.")
-        if not bool(match(semver_regex, version)):
+    # SemVer regex from https://semver.org/
+    semver_regex = (
+        r"^(?P<major>0|[1-9]\d*)\."
+        r"(?P<minor>0|[1-9]\d*)\."
+        r"(?P<patch>0|[1-9]\d*)"
+        r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-]"
+        r"[0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-]"
+        r"[0-9a-zA-Z-]*))*))?"
+        r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+"
+        r"(?:\.[0-9a-zA-Z-]+)*))?$"
+    )
+    if version is None:
+        validated_prompt["version"] = "1.0.0"
+    elif not isinstance(version, str):
+        raise TypeError("Prompt version must be a string.")
+    elif not bool(match(semver_regex, version)):
             if strict_validation:
                 raise ValueError("Prompt version must be semver compatible.")
             else:
                 log.warning(
                     "Prompt version must be semver compatible. Please check https://semver.org/ for more information."
                 )
+    else:
         # Add minor and patch version if not present
         version_parts = (version.split(".") + ["0", "0"])[:3]
         version = ".".join(version_parts)
         validated_prompt["version"] = version
-    else:
-        validated_prompt["version"] = "1.0.0"
 
     if variables is not None:
         if not isinstance(variables, dict):
