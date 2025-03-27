@@ -28,7 +28,6 @@ from ddtrace.llmobs._constants import SPAN_KIND
 from ddtrace.llmobs._constants import SPAN_START_WHILE_DISABLED_WARNING
 from ddtrace.llmobs._constants import TAGS
 from ddtrace.llmobs._llmobs import SUPPORTED_LLMOBS_INTEGRATIONS
-from ddtrace.llmobs._utils import _get_prompt_instance_id
 from ddtrace.llmobs._writer import LLMObsAgentlessEventClient
 from ddtrace.llmobs._writer import LLMObsProxiedEventClient
 from ddtrace.llmobs.utils import Prompt
