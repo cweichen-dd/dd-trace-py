@@ -28,6 +28,7 @@ from ddtrace.llmobs._constants import SPAN_KIND
 from ddtrace.llmobs._constants import SPAN_START_WHILE_DISABLED_WARNING
 from ddtrace.llmobs._constants import TAGS
 from ddtrace.llmobs._llmobs import SUPPORTED_LLMOBS_INTEGRATIONS
+from ddtrace.llmobs._utils import _get_prompt_instance_id
 from ddtrace.llmobs._writer import LLMObsAgentlessEventClient
 from ddtrace.llmobs._writer import LLMObsProxiedEventClient
 from ddtrace.llmobs.utils import Prompt
@@ -677,6 +678,8 @@ def test_annotate_prompt_dict(llmobs):
             "variables": {"var1": "var1", "var2": "var3"},
             "version": "1.0.0",
             "id": "test_prompt",
+            "name": "test_prompt",
+            "instance_id": mock.ANY,
             "_dd_context_variable_keys": ["context"],
             "_dd_query_variable_keys": ["question"],
         }
@@ -700,6 +703,8 @@ def test_annotate_prompt_dict_with_context_var_keys(llmobs):
             "variables": {"var1": "var1", "var2": "var3"},
             "version": "1.0.0",
             "id": "test_prompt",
+            "name": "test_prompt",
+            "instance_id": mock.ANY,
             "_dd_context_variable_keys": ["var1", "var2"],
             "_dd_query_variable_keys": ["user_input"],
         }
@@ -719,10 +724,36 @@ def test_annotate_prompt_typed_dict(llmobs):
             ),
         )
         assert span._get_ctx_item(INPUT_PROMPT) == {
+            "instance_id": mock.ANY,
             "template": "{var1} {var3}",
             "variables": {"var1": "var1", "var2": "var3"},
             "version": "1.0.0",
             "id": "test_prompt",
+            "name": "test_prompt",
+            "_dd_context_variable_keys": ["var1", "var2"],
+            "_dd_query_variable_keys": ["user_input"],
+        }
+
+
+def test_prompt_in_llm_annotation(llmobs):
+    with llmobs.llm(
+        model_name="test_model",
+        prompt=Prompt(
+            template="{var1} {var3}",
+            variables={"var1": "var1", "var2": "var3"},
+            version="1.0.0",
+            id="test_prompt",
+            rag_context_variables=["var1", "var2"],
+            rag_query_variables=["user_input"],
+        ),
+    ) as span:
+        assert span._get_ctx_item(INPUT_PROMPT) == {
+            "instance_id": mock.ANY,
+            "template": "{var1} {var3}",
+            "variables": {"var1": "var1", "var2": "var3"},
+            "version": "1.0.0",
+            "id": "test_prompt",
+            "name": "test_prompt",
             "_dd_context_variable_keys": ["var1", "var2"],
             "_dd_query_variable_keys": ["user_input"],
         }
@@ -1570,12 +1601,17 @@ def test_annotation_context_modifies_span_tags(llmobs):
 
 
 def test_annotation_context_modifies_prompt(llmobs):
-    with llmobs.annotation_context(prompt={"template": "test_template"}):
+    prompt = {"template": "test_template"}
+    with llmobs.annotation_context(prompt=prompt):
         with llmobs.llm(name="test_agent", model_name="test") as span:
             assert span._get_ctx_item(INPUT_PROMPT) == {
+                "id": "unnamed-ml-app-unnamed_prompt",
+                "instance_id": mock.ANY,
+                "name": "unnamed_prompt",
                 "template": "test_template",
                 "_dd_context_variable_keys": ["context"],
                 "_dd_query_variable_keys": ["question"],
+                "version": "1.0.0",
             }
 
 
@@ -1713,12 +1749,17 @@ async def test_annotation_context_async_modifies_span_tags(llmobs):
 
 
 async def test_annotation_context_async_modifies_prompt(llmobs):
-    async with llmobs.annotation_context(prompt={"template": "test_template"}):
+    prompt = {"template": "test_template"}
+    async with llmobs.annotation_context(prompt=prompt):
         with llmobs.llm(name="test_agent", model_name="test") as span:
             assert span._get_ctx_item(INPUT_PROMPT) == {
+                "id": "unnamed-ml-app-unnamed_prompt",
+                "instance_id": mock.ANY,
+                "name": "unnamed_prompt",
                 "template": "test_template",
                 "_dd_context_variable_keys": ["context"],
                 "_dd_query_variable_keys": ["question"],
+                "version": "1.0.0",
             }
 
 
