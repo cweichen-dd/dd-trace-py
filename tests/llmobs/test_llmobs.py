@@ -283,7 +283,7 @@ def test_structured_prompt_data(llmobs, llmobs_backend):
         "prompt": {
             "id": "unnamed-ml-app-unnamed_prompt",
             "name": "unnamed_prompt",
-            "instance_id": mock.ANY,
+            "instance_id": events[0]["spans"][0]["meta"]["input"]["prompt"]["instance_id"],
             "template": "test {{value}}",
             "_dd_context_variable_keys": ["context"],
             "_dd_query_variable_keys": ["question"],
@@ -309,7 +309,7 @@ def test_structured_prompt_data_v2(llmobs, llmobs_backend):
     assert events[0]["spans"][0]["meta"]["input"] == {
         "prompt": {
             "id": "test",
-            "instance_id": mock.ANY,
+            "instance_id": events[0]["spans"][0]["meta"]["input"]["prompt"]["instance_id"],
             "name": "test",
             "version": "1.0.0",
             "chat_template": [{"role": "user", "content": "test {{value}}"}],
