@@ -3,6 +3,7 @@ import re
 import threading
 import time
 
+import mock
 import pytest
 
 import ddtrace
