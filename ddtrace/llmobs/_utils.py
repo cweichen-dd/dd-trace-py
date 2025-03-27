@@ -1,4 +1,4 @@
-from hashlib import sha1
+from hashlib import sha256
 import json
 from re import match
 from typing import Any
@@ -159,7 +159,7 @@ def validate_prompt(
     return validated_prompt
 
 
-def _get_prompt_instance_id(validated_prompt: dict, ml_app: str) -> str:
+def _get_prompt_instance_id(validated_prompt: dict, ml_app: str = "") -> str:
     name = validated_prompt.get("name")
     variables = validated_prompt.get("variables")
     template = validated_prompt.get("template")
@@ -175,7 +175,9 @@ def _get_prompt_instance_id(validated_prompt: dict, ml_app: str) -> str:
         f"{ctx_variable_keys}{rag_query_variable_keys}"
     )
 
-    instance_id = sha1(instance_id_str.encode()).hexdigest()
+    hasher = sha256()
+    hasher.update(instance_id_str.encode("utf-8"))
+    instance_id = hasher.hexdigest()
 
     return instance_id
 
