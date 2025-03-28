@@ -111,11 +111,10 @@ def validate_prompt(
 
     if strict_validation and (template is None and chat_template is None):
         raise ValueError("Prompt must have a template or chat template.")
-    elif template:
-        if not isinstance(template, str):
-            raise TypeError("Prompt template must be a string")
-        validated_prompt["template"] = template
-    elif chat_template:
+    if template and not isinstance(template, str):
+        raise TypeError("Prompt template must be a string")
+    validated_prompt["template"] = template
+    if chat_template:
         validated_chat_template: List[Message] = []
         # accept a single message as a chat template
         if isinstance(chat_template, dict) and all(k in chat_template for k in ["role", "content"]):
