@@ -157,6 +157,9 @@ def validate_prompt(
         "instance_id": instance_id,
     }
 
+    # Remove keys with None values
+    validated_prompt = {k: v for k, v in validated_prompt.items() if v is not None}
+
     return validated_prompt
 
 
