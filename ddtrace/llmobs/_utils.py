@@ -56,6 +56,9 @@ def validate_prompt(
     ctx_variable_keys = prompt.get("rag_context_variables")
     query_variable_keys = prompt.get("rag_query_variables")
 
+    if not isinstance(prompt, dict):
+        raise TypeError(f"Prompt must be a dictionary, got {type(prompt).__name__}.")
+
     # Stage 1: Strict validations
     if strict_validation:
         if prompt_id is None:
