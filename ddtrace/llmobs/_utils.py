@@ -28,6 +28,18 @@ from ddtrace.trace import Span
 
 log = get_logger(__name__)
 
+# SemVer regex from https://semver.org/
+SEMVER_PATTERN = (
+    r"^(?P<major>0|[1-9]\d*)\."
+    r"(?P<minor>0|[1-9]\d*)\."
+    r"(?P<patch>0|[1-9]\d*)"
+    r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-]"
+    r"[0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-]"
+    r"[0-9a-zA-Z-]*))*))?"
+    r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+"
+    r"(?:\.[0-9a-zA-Z-]+)*))?$"
+)
+
 
 def validate_prompt(
     prompt: Union[Dict[Any, Any], Prompt], ml_app: str = "", strict_validation=True
@@ -71,22 +83,11 @@ def validate_prompt(
     else:
         validated_prompt["id"] = prompt_id
 
-    # SemVer regex from https://semver.org/
-    semver_regex = (
-        r"^(?P<major>0|[1-9]\d*)\."
-        r"(?P<minor>0|[1-9]\d*)\."
-        r"(?P<patch>0|[1-9]\d*)"
-        r"(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-]"
-        r"[0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-]"
-        r"[0-9a-zA-Z-]*))*))?"
-        r"(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+"
-        r"(?:\.[0-9a-zA-Z-]+)*))?$"
-    )
     if version is None:
         validated_prompt["version"] = "1.0.0"
     elif not isinstance(version, str):
         raise TypeError("Prompt version must be a string.")
-    elif not bool(match(semver_regex, version)):
+    elif not bool(match(SEMVER_PATTERN, version)):
         if strict_validation:
             raise ValueError("Prompt version must be semver compatible.")
         else:
