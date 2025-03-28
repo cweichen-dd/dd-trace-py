@@ -43,7 +43,9 @@ SEMVER_PATTERN_COMPILED = compile(
 PromptDict = Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Message]]]
 
 
-def validate_prompt(prompt: Dict[str, Any], ml_app: str = "", strict_validation: bool = True) -> Dict[str, Any]:
+def validate_prompt(
+    prompt: Union[Dict[str, Any], Prompt], ml_app: str = "", strict_validation: bool = True
+) -> Dict[str, Any]:
     # Stage 0: Extract values
     name = prompt.get("name")
     prompt_id = prompt.get("id")
@@ -59,7 +61,7 @@ def validate_prompt(prompt: Dict[str, Any], ml_app: str = "", strict_validation:
         if prompt_id is None:
             raise ValueError("'id' is mandatory under strict validation.")
 
-        if version is not None and not SEMVER_PATTERN.match(version):
+        if version is not None and not SEMVER_PATTERN_COMPILED.match(version):
             raise ValueError(f"'version' must be semver compatible, but got '{version}'.")
 
         if template is None and chat_template is None:
@@ -81,8 +83,8 @@ def validate_prompt(prompt: Dict[str, Any], ml_app: str = "", strict_validation:
 
     if not isinstance(final_version, str):
         raise TypeError(f"'version' must be str, got {type(final_version).__name__}.")
-    elif not SEMVER_PATTERN.match(final_version):
-        log.warn(f"'version' not semver compatible after defaults: '{final_version}'.")
+    elif not SEMVER_PATTERN_COMPILED.match(final_version):
+        log.warning("'version' not semver compatible", final_version)
 
     if not (isinstance(final_ctx_variable_keys, list) and all(isinstance(i, str) for i in final_ctx_variable_keys)):
         raise TypeError("'rag_context_variables' must be a List[str].")
@@ -100,7 +102,6 @@ def validate_prompt(prompt: Dict[str, Any], ml_app: str = "", strict_validation:
             if not (
                 (isinstance(ct, tuple) and len(ct) == 2 and all(isinstance(e, str) for e in ct))
                 or (isinstance(ct, dict) and all(key in ["role", "content"] for key in ct))
-                or isinstance(ct, Message)
             ):
                 raise TypeError("Each 'chat_template' entry should be Message, tuple[str,str], or dict[str,str].")
 
@@ -115,8 +116,7 @@ def validate_prompt(prompt: Dict[str, Any], ml_app: str = "", strict_validation:
     # Stage 4: Transformations
     # Normalize version to full semver (fill minor/patch if omitted)
     version_parts = (final_version.split(".") + ["0", "0"])[:3]
-    version = ".".join(version_parts)
-    final_version["version"] = version
+    final_version = ".".join(version_parts)
 
     # Ensure chat_template is standardized List[dict[role:str, content:str]]
     final_chat_template = None
@@ -125,11 +125,9 @@ def validate_prompt(prompt: Dict[str, Any], ml_app: str = "", strict_validation:
         for msg in chat_template:
             if isinstance(msg, tuple):
                 role, content = msg
-                final_chat_template.append({"role": role, "content": content})
+                final_chat_template.append(Message(role=role, content=content))
             elif isinstance(msg, dict):
-                final_chat_template.append({"role": msg["role"], "content": msg["content"]})
-            elif isinstance(msg, Message):
-                final_chat_template.append({"role": msg.role, "content": msg.content})
+                final_chat_template.append(Message(role=msg["role"], content=msg["content"]))
 
     # Stage 5: Hash Generation
     instance_id = _get_prompt_instance_id(
@@ -154,8 +152,8 @@ def validate_prompt(prompt: Dict[str, Any], ml_app: str = "", strict_validation:
         "variables": variables,
         "template": template,
         "chat_template": final_chat_template,
-        "rag_context_variables": final_ctx_variable_keys,
-        "rag_query_variables": final_query_variable_keys,
+        INTERNAL_CONTEXT_VARIABLE_KEYS: final_ctx_variable_keys,
+        INTERNAL_QUERY_VARIABLE_KEYS: final_query_variable_keys,
         "instance_id": instance_id,
     }
 
