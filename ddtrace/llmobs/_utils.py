@@ -1,6 +1,6 @@
 from hashlib import sha256
 import json
-from re import match
+from re import compile
 from typing import Any
 from typing import Dict
 from typing import List
@@ -29,7 +29,7 @@ from ddtrace.trace import Span
 log = get_logger(__name__)
 
 # SemVer regex from https://semver.org/
-SEMVER_PATTERN = (
+SEMVER_PATTERN_COMPILED = compile(
     r"^(?P<major>0|[1-9]\d*)\."
     r"(?P<minor>0|[1-9]\d*)\."
     r"(?P<patch>0|[1-9]\d*)"
@@ -40,13 +40,11 @@ SEMVER_PATTERN = (
     r"(?:\.[0-9a-zA-Z-]+)*))?$"
 )
 
+PromptDict = Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Message]]]
 
-def validate_prompt(
-    prompt: Union[Dict[Any, Any], Prompt], ml_app: str = "", strict_validation=True
-) -> Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Dict[str, str]], List[Message]]]:
-    validated_prompt: Dict[
-        str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Dict[str, str]], List[Message]]
-    ] = {}
+
+def validate_prompt(prompt: Union[Dict[Any, Any], Prompt], ml_app: str = "", strict_validation=True) -> PromptDict:
+    validated_prompt: PromptDict = {}
 
     if not isinstance(prompt, dict):
         raise TypeError("Prompt must be a dictionary")
@@ -87,7 +85,7 @@ def validate_prompt(
         validated_prompt["version"] = "1.0.0"
     elif not isinstance(version, str):
         raise TypeError("Prompt version must be a string.")
-    elif not bool(match(SEMVER_PATTERN, version)):
+    elif not SEMVER_PATTERN_COMPILED.match(version):
         if strict_validation:
             raise ValueError("Prompt version must be semver compatible.")
         else:
