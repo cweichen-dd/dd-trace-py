@@ -145,7 +145,7 @@ def validate_prompt(
     )
 
     # Stage 6: Produce output
-    validated_prompt = {}
+    validated_prompt: PromptDict = {}
     if final_prompt_id:
         validated_prompt["id"] = final_prompt_id
     if final_name:
