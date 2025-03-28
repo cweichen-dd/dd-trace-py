@@ -72,7 +72,7 @@ def validate_prompt(
     final_name = name or prompt_id or DEFAULT_PROMPT_NAME
     final_version = version or "1.0.0"
     final_ctx_variable_keys = ctx_variable_keys or ["context"]
-    final_query_variable_keys = query_variable_keys or ["query"]
+    final_query_variable_keys = query_variable_keys or ["question"]
 
     # Stage 3: Type checks
     if not isinstance(final_prompt_id, str):

@@ -279,7 +279,7 @@ def test_structured_prompt_data(llmobs, llmobs_backend):
     assert len(events) == 1
     assert events[0]["spans"][0]["meta"]["input"] == {
         "prompt": {
-            "id": "unnamed-ml-app-unnamed_prompt",
+            "id": "unnamed_prompt",
             "name": "unnamed_prompt",
             "instance_id": events[0]["spans"][0]["meta"]["input"]["prompt"]["instance_id"],
             "template": "test {{value}}",

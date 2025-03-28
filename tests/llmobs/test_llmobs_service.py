@@ -1626,7 +1626,7 @@ def test_annotation_context_modifies_prompt(llmobs):
     with llmobs.annotation_context(prompt=prompt):
         with llmobs.llm(name="test_agent", model_name="test") as span:
             assert span._get_ctx_item(INPUT_PROMPT) == {
-                "id": "unnamed-ml-app-unnamed_prompt",
+                "id": "unnamed_prompt",
                 "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
                 "name": "unnamed_prompt",
                 "template": "test_template",
@@ -1774,7 +1774,7 @@ async def test_annotation_context_async_modifies_prompt(llmobs):
     async with llmobs.annotation_context(prompt=prompt):
         with llmobs.llm(name="test_agent", model_name="test") as span:
             assert span._get_ctx_item(INPUT_PROMPT) == {
-                "id": "unnamed-ml-app-unnamed_prompt",
+                "id": "unnamed_prompt",
                 "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
                 "name": "unnamed_prompt",
                 "template": "test_template",
