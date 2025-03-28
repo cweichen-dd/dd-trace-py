@@ -285,6 +285,7 @@ def test_structured_prompt_data(llmobs, llmobs_backend):
             "template": "test {{value}}",
             "_dd_context_variable_keys": ["context"],
             "_dd_query_variable_keys": ["question"],
+            "version": "1.0.0",
         },
     }
 
