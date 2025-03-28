@@ -110,11 +110,12 @@ def validate_prompt(
             raise TypeError("Prompt variable values must be JSON serializable.")
         validated_prompt["variables"] = variables
 
-    if template and not isinstance(template, str):
-        raise TypeError("Prompt template must be a string")
-    validated_prompt["template"] = template
+    if template is not None:
+        if not isinstance(template, str):
+            raise TypeError("Prompt template must be a string")
+        validated_prompt["template"] = template
 
-    if chat_template:
+    if chat_template is not None:
         validated_chat_template: List[Message] = []
         # accept a single message as a chat template
         if isinstance(chat_template, dict) and all(k in chat_template for k in ["role", "content"]):
