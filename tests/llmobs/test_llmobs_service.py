@@ -734,6 +734,26 @@ def test_annotate_prompt_typed_dict(llmobs):
         }
 
 
+def test_instance_id_generation(llmobs):
+    with llmobs.llm(
+        model_name="test_model",
+        prompt=Prompt(
+            template="{var1} {var3}",
+            chat_template=[{"role": "user", "content": "{var1} {var3}"}],
+            variables={"var1": "var1", "var2": "var3"},
+            version="1.0.0",
+            id="test_prompt",
+            name="my-prompt",
+            rag_context_variables=["var1", "var2"],
+            rag_query_variables=["user_input"],
+        ),
+    ) as span:
+        assert (
+            span._get_ctx_item(INPUT_PROMPT)["instance_id"]
+            == "1ec8645c680b5ef2d365262fe5a4e0c6d870a438b018d85a5bead05c99872206"
+        )
+
+
 def test_prompt_in_llm_annotation(llmobs):
     with llmobs.llm(
         model_name="test_model",
