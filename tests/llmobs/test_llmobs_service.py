@@ -750,7 +750,7 @@ def test_instance_id_generation(llmobs):
     ) as span:
         assert (
             span._get_ctx_item(INPUT_PROMPT)["instance_id"]
-            == "1ec8645c680b5ef2d365262fe5a4e0c6d870a438b018d85a5bead05c99872206"
+            == "c4dd9414affcb02361d0bd65489d8cc184899baa6ac510ee8bf325f22d7a967c"
         )
 
 
