@@ -145,20 +145,25 @@ def validate_prompt(
     )
 
     # Stage 6: Produce output
-    validated_prompt = {
-        "id": final_prompt_id,
-        "name": final_name,
-        "version": final_version,
-        "variables": variables,
-        "template": template,
-        "chat_template": final_chat_template,
-        INTERNAL_CONTEXT_VARIABLE_KEYS: final_ctx_variable_keys,
-        INTERNAL_QUERY_VARIABLE_KEYS: final_query_variable_keys,
-        "instance_id": instance_id,
-    }
-
-    # Remove keys with None values
-    validated_prompt = {k: v for k, v in validated_prompt.items() if v is not None}
+    validated_prompt = {}
+    if final_prompt_id:
+        validated_prompt["id"] = final_prompt_id
+    if final_name:
+        validated_prompt["name"] = final_name
+    if final_version:
+        validated_prompt["version"] = final_version
+    if variables:
+        validated_prompt["variables"] = variables
+    if template:
+        validated_prompt["template"] = template
+    if final_chat_template:
+        validated_prompt["chat_template"] = final_chat_template
+    if final_ctx_variable_keys:
+        validated_prompt[INTERNAL_CONTEXT_VARIABLE_KEYS] = final_ctx_variable_keys
+    if final_query_variable_keys:
+        validated_prompt[INTERNAL_QUERY_VARIABLE_KEYS] = final_query_variable_keys
+    if instance_id:
+        validated_prompt["instance_id"] = instance_id
 
     return validated_prompt
 
