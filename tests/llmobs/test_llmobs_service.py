@@ -739,6 +739,7 @@ def test_prompt_in_llm_annotation(llmobs):
         model_name="test_model",
         prompt=Prompt(
             template="{var1} {var3}",
+            chat_template=[{"role": "user", "content": "{var1} {var3}"}],
             variables={"var1": "var1", "var2": "var3"},
             version="1.0.0",
             id="test_prompt",
@@ -747,8 +748,9 @@ def test_prompt_in_llm_annotation(llmobs):
         ),
     ) as span:
         assert span._get_ctx_item(INPUT_PROMPT) == {
-            "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
             "template": "{var1} {var3}",
+            "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
+            "chat_template": [{"role": "user", "content": "{var1} {var3}"}],
             "variables": {"var1": "var1", "var2": "var3"},
             "version": "1.0.0",
             "id": "test_prompt",
