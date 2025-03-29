@@ -235,7 +235,8 @@ def job_appsec_integrations_pygoat(job: JobSpec) -> str:
   before_script:
     - !reference [.test_base_riot_snapshot, before_script]
     - pip cache info
-    - docker-compose build pygoat && docker-compose up -d pygoat
+    - docker-compose pull testagent
+    - docker-compose build pygoat && docker-compose up -d pygoat testagent
     - riot -v run -s --pass-env wait -- testagent
   cache:
     key: v0-pip-${{PIP_CACHE_KEY}}-cache
