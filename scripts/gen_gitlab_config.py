@@ -115,27 +115,23 @@ def gen_required_suites() -> None:
         git_selections=extract_git_commit_selections(os.getenv("CI_COMMIT_MESSAGE", "")),
     )
 
-    # Exclude the suites that are run in CircleCI. These likely don't run in
-    # GitLab yet.
-    with YAML() as yaml:
-        circleci_config = yaml.load(ROOT / ".circleci" / "config.templ.yml")
-        circleci_jobs = set(circleci_config["jobs"].keys())
-
     # Copy the template file
     TESTS_GEN.write_text((GITLAB / "tests.yml").read_text())
     # Generate the list of suites to run
     with TESTS_GEN.open("a") as f:
         for suite in required_suites:
-            if suite.rsplit("::", maxsplit=1)[-1] in circleci_jobs:
-                LOGGER.debug("Skipping CircleCI suite %s", suite)
-                continue
-
             jobspec = JobSpec(suite, **suites[suite])
             if jobspec.skip:
                 LOGGER.debug("Skipping suite %s", suite)
                 continue
 
-            print(str(jobspec), file=f)
+            suite_name = jobspec.pattern or suite
+            func_name = f"job_{suite_name}"
+            if func_name in globals():
+                LOGGER.info("Calling %s", func_name)
+                print(globals()[func_name](jobspec), file=f)
+            else:
+                print(str(jobspec), file=f)
 
 
 def gen_build_docs() -> None:
@@ -224,23 +220,34 @@ def gen_pre_checks() -> None:
     )
 
 
-def gen_appsec_integrations_pygoat() -> None:
-    with TESTS_GEN.open("a") as f:
-        f.write(
-            """
-appsec_integrations_pygoat:
+def job_appsec_integrations_pygoat(job: JobSpec) -> str:
+    """Generate the list of jobs for the appsec_integrations_pygoat tests."""
+    pip_cache_key = (
+        subprocess.check_output([".gitlab/scripts/get-riot-pip-cache-key.sh", "appsec_integrations_pygoat"])
+        .decode()
+        .strip()
+    )
+
+    return f"""
+{job.name}:
   extends: .test_base_riot_snapshot
   tags: ["docker-in-docker:amd64"]
-  parallel: 13
-  variables:
-    SUITE_NAME: "appsec_integrations_pygoat"
   before_script:
     - !reference [.test_base_riot_snapshot, before_script]
     - pip cache info
-    # Build and start the pygoat container
-    - docker-compose up -d pygoat
+    - docker-compose build pygoat && docker-compose up -d pygoat
+    - riot -v run -s --pass-env wait -- testagent
+  cache:
+    key: v0-pip-${{PIP_CACHE_KEY}}-cache
+    paths:
+      - .cache
+  variables:
+    SUITE_NAME: appsec_integrations_pygoat
+    PIP_CACHE_DIR: ${{CI_PROJECT_DIR}}/.cache/pip
+    PIP_CACHE_KEY: {pip_cache_key}
+  parallel: {job.parallelism}
+  retry: {job.retry}
 """
-        )
 
 
 def gen_appsec_iast_packages() -> None:
@@ -359,8 +366,6 @@ import sys  # noqa
 from argparse import ArgumentParser  # noqa
 from pathlib import Path  # noqa
 from time import monotonic_ns as time  # noqa
-
-from ruamel.yaml import YAML  # noqa
 
 logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 LOGGER = logging.getLogger(__name__)

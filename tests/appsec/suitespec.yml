@@ -80,6 +80,7 @@ suites:
       - tests/appsec/iast_aggregated_memcheck/*
     runner: hatch
     timeout: 50m
+#  Manually defined in scripts/gen_gitlab_config.py
 #  appsec_iast_packages:
 #    env:
 #      PIP_CACHE_DIR: $CI_PROJECT_DIR/.cache/pip
@@ -111,8 +112,9 @@ suites:
     runner: hatch
     snapshot: true
     timeout: 40m
+#  Manually defined in scripts/gen_gitlab_config.py
   appsec_integrations_pygoat:
-    parallelism: 7
+    parallelism: 13
     paths:
       - '@bootstrap'
       - '@core'
