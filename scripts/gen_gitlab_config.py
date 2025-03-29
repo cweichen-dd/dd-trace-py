@@ -224,6 +224,25 @@ def gen_pre_checks() -> None:
     )
 
 
+def gen_appsec_integrations_pygoat() -> None:
+    with TESTS_GEN.open("a") as f:
+        f.write(
+            """
+appsec_integrations_pygoat:
+  extends: .test_base_riot_snapshot
+  tags: ["docker-in-docker:amd64"]
+  parallel: 13
+  variables:
+    SUITE_NAME: "appsec_integrations_pygoat"
+  before_script:
+    - !reference [.test_base_riot_snapshot, before_script]
+    - pip cache info
+    # Build and start the pygoat container
+    - docker-compose up -d pygoat
+"""
+        )
+
+
 def gen_appsec_iast_packages() -> None:
     """Generate the list of jobs for the appsec_iast_packages tests."""
     with TESTS_GEN.open("a") as f:
