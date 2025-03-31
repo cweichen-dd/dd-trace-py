@@ -734,7 +734,26 @@ def test_annotate_prompt_typed_dict(llmobs):
         }
 
 
-def test_instance_id_generation(llmobs):
+def test_prompt_strict_validation(llmobs, mock_llmobs_logs):
+    with llmobs.llm(model_name="test_model") as span:
+        prompt_with_no_id = Prompt(template="{var1} {var3}", version="1.0.0")
+        llmobs.annotate(span=span, prompt=prompt_with_no_id)
+        assert span._get_ctx_item(INPUT_PROMPT) is None
+        mock_llmobs_logs.warning.assert_called_once_with("Failed to validate prompt with error: ", exc_info=True)
+        mock_llmobs_logs.reset_mock()
+
+        prompt_with_invalid_version = Prompt(template="{var1} {var3}", id="test_prompt", version="version")
+        llmobs.annotate(span=span, prompt=prompt_with_invalid_version)
+        mock_llmobs_logs.warning.assert_called_once_with("Failed to validate prompt with error: ", exc_info=True)
+        mock_llmobs_logs.reset_mock()
+
+        prompt_with_no_template = Prompt(id="test_prompt", version="1.0.0")
+        llmobs.annotate(span=span, prompt=prompt_with_no_template)
+        mock_llmobs_logs.warning.assert_called_once_with("Failed to validate prompt with error: ", exc_info=True)
+        mock_llmobs_logs.reset_mock()
+
+
+def test_prompt_instance_id_generation(llmobs):
     with llmobs.llm(
         model_name="test_model",
         prompt=Prompt(
