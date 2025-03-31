@@ -65,8 +65,12 @@ def validate_prompt(
         if prompt_id is None:
             raise ValueError("'id' is mandatory under strict validation.")
 
-        if version is not None and not SEMVER_PATTERN_COMPILED.match(version):
-            raise ValueError(f"'version' must be semver compatible, but got '{version}'.")
+        if version is not None:
+            # Normalize version to full semver (fill minor/patch if omitted)
+            version_parts = (version.split(".") + ["0", "0"])[:3]
+            version = ".".join(version_parts)
+            if not SEMVER_PATTERN_COMPILED.match(version):
+                raise ValueError(f"'version' must be semver compatible, but got '{version}'.")
 
         if template is None and chat_template is None:
             raise ValueError("Either 'template' or 'chat_template' must be provided.")
@@ -122,6 +126,8 @@ def validate_prompt(
     # Normalize version to full semver (fill minor/patch if omitted)
     version_parts = (final_version.split(".") + ["0", "0"])[:3]
     final_version = ".".join(version_parts)
+    if not SEMVER_PATTERN_COMPILED.match(final_version):
+        log.warning("'version' not semver compatible", final_version)
 
     # Ensure chat_template is standardized List[dict[role:str, content:str]]
     final_chat_template = None
