@@ -46,7 +46,12 @@ PromptDict = Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]
 def validate_prompt(
     prompt: Union[Dict[str, Any], Prompt], ml_app: str = "", strict_validation: bool = True
 ) -> Dict[str, Any]:
-    # Stage 0: Extract values
+
+    # Stage 0: Check if dict
+    if not isinstance(prompt, dict):
+        raise TypeError(f"Prompt must be a dictionary, got {type(prompt).__name__}.")
+
+    # Stage 1: Extract values
     name = prompt.get("name")
     prompt_id = prompt.get("id")
     version = prompt.get("version")
@@ -56,10 +61,7 @@ def validate_prompt(
     ctx_variable_keys = prompt.get("rag_context_variables")
     query_variable_keys = prompt.get("rag_query_variables")
 
-    if not isinstance(prompt, dict):
-        raise TypeError(f"Prompt must be a dictionary, got {type(prompt).__name__}.")
-
-    # Stage 1: Strict validations
+    # Stage 2: Strict validations
     if strict_validation:
         if prompt_id is None:
             raise ValueError("'id' is mandatory under strict validation.")
@@ -70,14 +72,14 @@ def validate_prompt(
         if template is None and chat_template is None:
             raise ValueError("Either 'template' or 'chat_template' must be provided.")
 
-    # Stage 2: Set defaults
+    # Stage 3: Set defaults
     final_prompt_id = prompt_id or name or DEFAULT_PROMPT_NAME
     final_name = name or prompt_id or DEFAULT_PROMPT_NAME
     final_version = version or "1.0.0"
     final_ctx_variable_keys = ctx_variable_keys or ["context"]
     final_query_variable_keys = query_variable_keys or ["question"]
 
-    # Stage 3: Type checks
+    # Stage 4: Type checks
     if not isinstance(final_prompt_id, str):
         raise TypeError(f"'id' must be str, got {type(final_prompt_id).__name__}.")
 
@@ -116,7 +118,7 @@ def validate_prompt(
         if not all(isinstance(v, (str, int, float, bool, list, dict)) for v in variables.values()):
             raise TypeError("Values of 'variables' must be JSON serializable.")
 
-    # Stage 4: Transformations
+    # Stage 5: Transformations
     # Normalize version to full semver (fill minor/patch if omitted)
     version_parts = (final_version.split(".") + ["0", "0"])[:3]
     final_version = ".".join(version_parts)
@@ -132,7 +134,7 @@ def validate_prompt(
             elif isinstance(msg, dict):
                 final_chat_template.append(Message(role=msg["role"], content=msg["content"]))
 
-    # Stage 5: Hash Generation
+    # Stage 6: Hash Generation
     instance_id = _get_prompt_instance_id(
         {
             "id": final_prompt_id,
@@ -147,7 +149,7 @@ def validate_prompt(
         ml_app,
     )
 
-    # Stage 6: Produce output
+    # Stage 7: Produce output
     validated_prompt: PromptDict = {}
     if final_prompt_id:
         validated_prompt["id"] = final_prompt_id
