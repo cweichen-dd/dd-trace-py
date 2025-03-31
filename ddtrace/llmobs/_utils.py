@@ -86,9 +86,10 @@ def validate_prompt(
         raise TypeError(f"'name' must be str, got {type(final_name).__name__}.")
 
     if not isinstance(final_version, str):
-        raise TypeError(f"'version' must be str, got {type(final_version).__name__}.")
-    elif not SEMVER_PATTERN_COMPILED.match(final_version):
-        log.warning("'version' not semver compatible", final_version)
+        try:
+            final_version = str(final_version)
+        except Exception as e:
+            raise TypeError(f"'version' must be str, got {type(final_version).__name__}.")
 
     if not (isinstance(final_ctx_variable_keys, list) and all(isinstance(i, str) for i in final_ctx_variable_keys)):
         raise TypeError("'rag_context_variables' must be a List[str].")
