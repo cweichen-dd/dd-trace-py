@@ -92,7 +92,7 @@ def validate_prompt(
     if not isinstance(final_version, str):
         try:
             final_version = str(final_version)
-        except Exception as e:
+        except Exception:
             raise TypeError(f"'version' must be str, got {type(final_version).__name__}.")
 
     if not (isinstance(final_ctx_variable_keys, list) and all(isinstance(i, str) for i in final_ctx_variable_keys)):
