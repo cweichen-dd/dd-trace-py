@@ -272,7 +272,7 @@ def test_structured_io_data(llmobs, llmobs_backend):
         assert events[0]["spans"][0]["meta"]["output"]["value"] == '{"data": "test2"}'
 
 
-def test_structured_prompt_data(llmobs, llmobs_backend):
+def test_structured_prompt_data_v1(llmobs, llmobs_backend):
     with llmobs.llm() as span:
         llmobs.annotate(span, prompt={"template": "test {{value}}"})
     events = llmobs_backend.wait_for_num_events(num=1)
@@ -318,6 +318,62 @@ def test_structured_prompt_data_v2(llmobs, llmobs_backend):
             "_dd_query_variable_keys": ["question"],
         },
     }
+
+
+def test_prompt_context_updates_prompt(llmobs, llmobs_backend):
+    prompt = Prompt(
+        name="test",
+        id="test",
+        template="test {{value}}",
+        chat_template=[("user", "test {{value}}")],
+        variables={"value": "test"},
+    )
+    with llmobs.llm() as span:
+        with llmobs.prompt_context(
+            span,
+            prompt=prompt,
+        ):
+            events = llmobs_backend.wait_for_num_events(num=1)
+            assert len(events) == 1
+            assert events[0]["spans"][0]["meta"]["input"] == {
+                "prompt": {
+                    "id": "test",
+                    "instance_id": events[0]["spans"][0]["meta"]["input"]["prompt"]["instance_id"],
+                    "name": "test",
+                    "version": "1.0.0",
+                    "chat_template": [{"role": "user", "content": "test {{value}}"}],
+                    "template": "test {{value}}",
+                    "variables": {"value": "test"},
+                    "_dd_context_variable_keys": ["context"],
+                    "_dd_query_variable_keys": ["question"],
+                },
+            }
+
+
+def test_prompt_through_llm_annotation(llmobs, llmobs_backend):
+    prompt = Prompt(
+        name="test",
+        id="test",
+        template="test {{value}}",
+        chat_template=[("user", "test {{value}}")],
+        variables={"value": "test"},
+    )
+    with llmobs.llm(prompt=prompt):
+        events = llmobs_backend.wait_for_num_events(num=1)
+        assert len(events) == 1
+        assert events[0]["spans"][0]["meta"]["input"] == {
+            "prompt": {
+                "id": "test",
+                "instance_id": events[0]["spans"][0]["meta"]["input"]["prompt"]["instance_id"],
+                "name": "test",
+                "version": "1.0.0",
+                "chat_template": [{"role": "user", "content": "test {{value}}"}],
+                "template": "test {{value}}",
+                "variables": {"value": "test"},
+                "_dd_context_variable_keys": ["context"],
+                "_dd_query_variable_keys": ["question"],
+            },
+        }
 
 
 def test_structured_io_data_unserializable(llmobs, llmobs_backend):
