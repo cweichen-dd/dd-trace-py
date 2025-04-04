@@ -15,6 +15,7 @@ from ddtrace.internal.packages import get_distributions
 from ddtrace.internal.utils.cache import callonce
 from ddtrace.internal.writer import AgentWriter
 from ddtrace.internal.writer import LogWriter
+from ddtrace.internal.writer import NativeWriter
 from ddtrace.settings.asm import config as asm_config
 
 from .logger import get_logger
@@ -57,7 +58,7 @@ def collect(tracer):
     if isinstance(tracer._writer, LogWriter):
         agent_url = "AGENTLESS"
         agent_error = None
-    elif isinstance(tracer._writer, AgentWriter):
+    elif isinstance(tracer._writer, AgentWriter) or isinstance(trace._writer, NativeWriter):
         writer = tracer._writer
         agent_url = writer.agent_url
         try:

@@ -60,7 +60,7 @@ from ddtrace.internal.utils import _get_metas_to_propagate
 from ddtrace.internal.utils.formats import format_trace_id
 from ddtrace.internal.utils.http import verify_url
 from ddtrace.internal.writer import AgentResponse
-from ddtrace.internal.writer import AgentWriter
+from ddtrace.internal.writer import NativeWriter
 from ddtrace.internal.writer import LogWriter
 from ddtrace.internal.writer import TraceWriter
 from ddtrace.settings._config import Config
@@ -241,13 +241,11 @@ class Tracer(object):
         if self._use_log_writer():
             writer: TraceWriter = LogWriter()
         else:
-            writer = AgentWriter(
+            writer = NativeWriter(
                 agent_url=self._agent_url,
                 dogstatsd=get_dogstatsd_client(self._dogstatsd_url),
                 sync_mode=self._use_sync_mode(),
-                headers={"Datadog-Client-Computed-Stats": "yes"}
-                if (self._compute_stats or asm_config._apm_opt_out)
-                else {},
+                compute_stats_enabled=self._compute_stats,
                 report_metrics=not asm_config._apm_opt_out,
                 response_callback=self._agent_response_callback,
             )
@@ -434,7 +432,7 @@ class Tracer(object):
         if compute_stats_enabled is not None:
             self._compute_stats = compute_stats_enabled
 
-        if isinstance(self._writer, AgentWriter):
+        if isinstance(self._writer, NativeWriter):
             if appsec_enabled:
                 self._writer._api_version = "v0.4"
             self._writer.dogstatsd = get_dogstatsd_client(self._dogstatsd_url)
@@ -821,7 +819,7 @@ class Tracer(object):
     @property
     def agent_trace_url(self) -> Optional[str]:
         """Trace agent url"""
-        if isinstance(self._writer, AgentWriter):
+        if isinstance(self._writer, NativeWriter):
             return self._writer.agent_url
 
         return None
