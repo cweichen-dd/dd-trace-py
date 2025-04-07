@@ -60,7 +60,7 @@ from ddtrace.llmobs._constants import SPAN_START_WHILE_DISABLED_WARNING
 from ddtrace.llmobs._constants import TAGS
 from ddtrace.llmobs._context import LLMObsContextProvider
 from ddtrace.llmobs._evaluators.runner import EvaluatorRunner
-from ddtrace.llmobs._utils import AnnotationContext
+from ddtrace.llmobs._utils import AnnotationContext, strict_validate_prompt
 from ddtrace.llmobs._utils import LinkTracker
 from ddtrace.llmobs._utils import _get_ml_app
 from ddtrace.llmobs._utils import _get_session_id
@@ -955,6 +955,7 @@ class LLMObs(Service):
                 span.name = _name
             if prompt is not None:
                 try:
+                    # strict validation disabled to allow for retro-compatibility
                     validated_prompt = validate_prompt(prompt, _get_ml_app(span), strict_validation=False)
                     cls._set_dict_attribute(span, INPUT_PROMPT, validated_prompt)
                 except TypeError:
@@ -1432,7 +1433,7 @@ class LLMObs(Service):
     @classmethod
     def prompt_context(
         cls,
-        name: str,
+        name: Optional[str] = None,
         version: str = "1.0.0",
         prompt_id: Optional[str] = None,
         template: Optional[str] = None,
@@ -1442,8 +1443,7 @@ class LLMObs(Service):
         rag_query_variable_keys: Optional[List[str]] = None,
     ) -> AnnotationContext:
         """
-        shortcut to create a prompt object and annotate it
-
+        shortcut to create a prompt or pass a prompt object and annotate it
         """
         prompt = Prompt(
             name=name,
@@ -1455,10 +1455,7 @@ class LLMObs(Service):
             rag_context_variables=rag_context_variable_keys,
             rag_query_variables=rag_query_variable_keys,
         )
-        if prompt_id is None:
-            raise ValueError("Prompt id is required")
-        if template and chat_template is None:
-            raise ValueError("At least one of template or chat_template is required for a Prompt")
+        strict_validate_prompt(prompt)
         return cls.annotation_context(prompt=prompt)
 
 

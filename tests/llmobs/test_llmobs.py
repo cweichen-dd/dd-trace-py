@@ -321,17 +321,13 @@ def test_structured_prompt_data_v2(llmobs, llmobs_backend):
 
 
 def test_prompt_context_updates_prompt(llmobs, llmobs_backend):
-    prompt = Prompt(
-        name="test",
-        id="test",
-        template="test {{value}}",
-        chat_template=[("user", "test {{value}}")],
-        variables={"value": "test"},
-    )
     with llmobs.llm() as span:
         with llmobs.prompt_context(
-            span,
-            prompt=prompt,
+            name="test",
+            id="test",
+            template="test {{value}}",
+            chat_template=[("user", "test {{value}}")],
+            variables={"value": "test"},
         ):
             events = llmobs_backend.wait_for_num_events(num=1)
             assert len(events) == 1

@@ -62,18 +62,7 @@ def validate_prompt(
 
     # Stage 2: Strict validations
     if strict_validation:
-        if prompt_id is None:
-            raise ValueError("'id' is mandatory under strict validation.")
-
-        if version is not None:
-            # Normalize version to full semver (fill minor/patch if omitted)
-            version_parts = (version.split(".") + ["0", "0"])[:3]
-            version = ".".join(version_parts)
-            if not SEMVER_PATTERN_COMPILED.match(version):
-                raise ValueError(f"'version' must be semver compatible, but got '{version}'.")
-
-        if template is None and chat_template is None:
-            raise ValueError("Either 'template' or 'chat_template' must be provided.")
+        strict_validate_prompt(prompt)
 
     # Stage 3: Set defaults
     final_prompt_id = prompt_id or name or DEFAULT_PROMPT_NAME
@@ -177,6 +166,32 @@ def validate_prompt(
         validated_prompt["instance_id"] = instance_id
 
     return validated_prompt
+
+
+def strict_validate_prompt(prompt: Union[Dict[str, Any], Prompt]):
+    """
+    Validate prompt dictionary under strict validation mode. Ensures that :
+    - 'id' is mandatory
+    - 'version' is semver compatible
+    - 'template' or 'chat_template' is mandatory
+    """
+    prompt_id = prompt.get("id")
+    version = prompt.get("version")
+    template = prompt.get("template")
+    chat_template = prompt.get("chat_template")
+
+    if prompt_id is None:
+        raise ValueError("'id' is mandatory under strict validation.")
+
+    if version is not None:
+        # Normalize version to full semver (fill minor/patch if omitted)
+        version_parts = (version.split(".") + ["0", "0"])[:3]
+        version = ".".join(version_parts)
+        if not SEMVER_PATTERN_COMPILED.match(version):
+            raise ValueError(f"'version' must be semver compatible, but got '{version}'.")
+
+    if template is None and chat_template is None:
+        raise ValueError("Either 'template' or 'chat_template' must be provided.")
 
 
 def _get_prompt_instance_id(validated_prompt: dict, ml_app: str = "") -> str:
