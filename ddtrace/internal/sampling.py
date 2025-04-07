@@ -87,15 +87,6 @@ def validate_sampling_decision(
     return meta
 
 
-def set_sampling_decision_maker(
-    context,  # type: Context
-    sampling_mechanism: int,
-) -> Optional[Text]:
-    value = "-%d" % sampling_mechanism
-    context._meta[SAMPLING_DECISION_TRACE_TAG_KEY] = value
-    return value
-
-
 class SpanSamplingRule:
     """A span sampling rule to evaluate and potentially tag each span upon finish."""
 
@@ -268,7 +259,7 @@ def is_single_span_sampled(span):
 def _set_sampling_tags(span, sampled, sample_rate, mechanism):
     # type: (Span, bool, float, int) -> None
     # Set the sampling mechanism
-    set_sampling_decision_maker(span.context, mechanism)
+    span._set_sampling_decision_maker(mechanism)
     # Set the sampling psr rate
     if mechanism in (
         SamplingMechanism.LOCAL_USER_TRACE_SAMPLING_RULE,
