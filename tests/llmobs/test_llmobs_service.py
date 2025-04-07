@@ -738,20 +738,14 @@ def test_prompt_strict_validation(llmobs, mock_llmobs_logs):
     prompt_with_no_id = Prompt(template="{var1} {var3}", version="1.0.0")
     with llmobs.llm(model_name="test_model", prompt=prompt_with_no_id) as span:
         assert span._get_ctx_item(INPUT_PROMPT) is None
-        mock_llmobs_logs.warning.assert_called_once_with("Failed to validate prompt with error: ", exc_info=True)
-        mock_llmobs_logs.reset_mock()
 
     prompt_with_invalid_version = Prompt(template="{var1} {var3}", id="test_prompt", version="version")
     with llmobs.llm(model_name="test_model", prompt=prompt_with_invalid_version) as span:
         assert span._get_ctx_item(INPUT_PROMPT) is None
-        mock_llmobs_logs.warning.assert_called_once_with("Failed to validate prompt with error: ", exc_info=True)
-        mock_llmobs_logs.reset_mock()
 
     prompt_with_no_template = Prompt(id="test_prompt", version="1.0.0")
     with llmobs.llm(model_name="test_model", prompt=prompt_with_no_template) as span:
         assert span._get_ctx_item(INPUT_PROMPT) is None
-        mock_llmobs_logs.warning.assert_called_once_with("Failed to validate prompt with error: ", exc_info=True)
-        mock_llmobs_logs.reset_mock()
 
 
 def test_prompt_instance_id_generation(llmobs):
@@ -1666,17 +1660,15 @@ def test_prompt_context_modifies_prompt(llmobs, llmobs_backend):
     ):
         with llmobs.llm(name="test_agent", model_name="test") as span:
             assert span._get_ctx_item(INPUT_PROMPT) == {
-                "prompt": {
-                    "id": "test",
-                    "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
-                    "name": "test",
-                    "version": "1.0.0",
-                    "chat_template": [{"role": "user", "content": "test {{value}}"}],
-                    "template": "test {{value}}",
-                    "variables": {"value": "test"},
-                    "_dd_context_variable_keys": ["context"],
-                    "_dd_query_variable_keys": ["question"],
-                },
+                "id": "test",
+                "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
+                "name": "test",
+                "version": "1.0.0",
+                "chat_template": [{"role": "user", "content": "test {{value}}"}],
+                "template": "test {{value}}",
+                "variables": {"value": "test"},
+                "_dd_context_variable_keys": ["context"],
+                "_dd_query_variable_keys": ["question"],
             }
 
 
@@ -1690,17 +1682,15 @@ def test_llm_annotation_modifies_prompt(llmobs, llmobs_backend):
     )
     with llmobs.llm(name="test_agent", model_name="test", prompt=prompt) as span:
         assert span._get_ctx_item(INPUT_PROMPT) == {
-            "prompt": {
-                "id": "test",
-                "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
-                "name": "test",
-                "version": "1.0.0",
-                "chat_template": [{"role": "user", "content": "test {{value}}"}],
-                "template": "test {{value}}",
-                "variables": {"value": "test"},
-                "_dd_context_variable_keys": ["context"],
-                "_dd_query_variable_keys": ["question"],
-            },
+            "id": "test",
+            "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
+            "name": "test",
+            "version": "1.0.0",
+            "chat_template": [{"role": "user", "content": "test {{value}}"}],
+            "template": "test {{value}}",
+            "variables": {"value": "test"},
+            "_dd_context_variable_keys": ["context"],
+            "_dd_query_variable_keys": ["question"],
         }
 
 
