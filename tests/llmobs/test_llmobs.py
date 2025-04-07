@@ -321,7 +321,7 @@ def test_structured_prompt_data_v2(llmobs, llmobs_backend):
 
 
 def test_prompt_context_updates_prompt(llmobs, llmobs_backend):
-    with llmobs.llm() as span:
+    with llmobs.llm():
         with llmobs.prompt_context(
             name="test",
             prompt_id="test",

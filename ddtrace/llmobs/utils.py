@@ -39,7 +39,7 @@ class Prompt(TypedDict, total=False):
     rag_query_variables: List[str] - a list of variable key names that contains query information
     """
 
-    name: str
+    name: Optional[str]
     version: Optional[str]
     id: Optional[str]
     template: Optional[str]
