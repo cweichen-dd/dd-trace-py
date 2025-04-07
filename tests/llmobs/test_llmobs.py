@@ -324,7 +324,7 @@ def test_prompt_context_updates_prompt(llmobs, llmobs_backend):
     with llmobs.llm() as span:
         with llmobs.prompt_context(
             name="test",
-            id="test",
+            prompt_id="test",
             template="test {{value}}",
             chat_template=[("user", "test {{value}}")],
             variables={"value": "test"},
