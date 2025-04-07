@@ -1655,6 +1655,56 @@ def test_annotation_context_modifies_prompt(llmobs):
             }
 
 
+def test_prompt_context_modifies_prompt(llmobs, llmobs_backend):
+    with llmobs.prompt_context(
+        name="test",
+        prompt_id="test",
+        template="test {{value}}",
+        chat_template=[("user", "test {{value}}")],
+        variables={"value": "test"},
+    ):
+        with llmobs.llm(name="test_agent", model_name="test") as span:
+            assert span._get_ctx_item(INPUT_PROMPT) == {
+                "prompt": {
+                    "id": "test",
+                    "instance_id": span._get_ctx_item(INPUT_PROMPT)[0]["spans"][0]["meta"]["input"]["prompt"][
+                        "instance_id"
+                    ],
+                    "name": "test",
+                    "version": "1.0.0",
+                    "chat_template": [{"role": "user", "content": "test {{value}}"}],
+                    "template": "test {{value}}",
+                    "variables": {"value": "test"},
+                    "_dd_context_variable_keys": ["context"],
+                    "_dd_query_variable_keys": ["question"],
+                },
+            }
+
+
+def test_llm_annotation_modifies_prompt(llmobs, llmobs_backend):
+    prompt = Prompt(
+        name="test",
+        id="test",
+        template="test {{value}}",
+        chat_template=[("user", "test {{value}}")],
+        variables={"value": "test"},
+    )
+    with llmobs.llm(name="test_agent", model_name="test", prompt=prompt) as span:
+        assert span._get_ctx_item(INPUT_PROMPT) == {
+            "prompt": {
+                "id": "test",
+                "instance_id": span._get_ctx_item(INPUT_PROMPT)["spans"][0]["meta"]["input"]["prompt"]["instance_id"],
+                "name": "test",
+                "version": "1.0.0",
+                "chat_template": [{"role": "user", "content": "test {{value}}"}],
+                "template": "test {{value}}",
+                "variables": {"value": "test"},
+                "_dd_context_variable_keys": ["context"],
+                "_dd_query_variable_keys": ["question"],
+            },
+        }
+
+
 def test_annotation_context_modifies_name(llmobs):
     with llmobs.annotation_context(name="test_agent_override"):
         with llmobs.llm(name="test_agent", model_name="test") as span:
