@@ -734,7 +734,7 @@ def test_annotate_prompt_typed_dict(llmobs):
         }
 
 
-def test_prompt_strict_validation(llmobs, mock_llmobs_logs):
+def test_prompt_strict_validation(llmobs):
     prompt_with_no_id = Prompt(template="{var1} {var3}", version="1.0.0")
     with llmobs.llm(model_name="test_model", prompt=prompt_with_no_id) as span:
         assert span._get_ctx_item(INPUT_PROMPT) is None
