@@ -688,6 +688,7 @@ class LLMObs(Service):
         :param str session_id: The ID of the underlying user session. Required for tracking sessions.
         :param str ml_app: The name of the ML application that the agent is orchestrating. If not provided, the default
                            value will be set to the value of `DD_LLMOBS_ML_APP`.
+        :param prompt: A dictionary that represents the prompt used for an LLM call.
 
         :returns: The Span object representing the traced operation.
         """

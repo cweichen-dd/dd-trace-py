@@ -1668,9 +1668,7 @@ def test_prompt_context_modifies_prompt(llmobs, llmobs_backend):
             assert span._get_ctx_item(INPUT_PROMPT) == {
                 "prompt": {
                     "id": "test",
-                    "instance_id": span._get_ctx_item(INPUT_PROMPT)[0]["spans"][0]["meta"]["input"]["prompt"][
-                        "instance_id"
-                    ],
+                    "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
                     "name": "test",
                     "version": "1.0.0",
                     "chat_template": [{"role": "user", "content": "test {{value}}"}],
@@ -1694,7 +1692,7 @@ def test_llm_annotation_modifies_prompt(llmobs, llmobs_backend):
         assert span._get_ctx_item(INPUT_PROMPT) == {
             "prompt": {
                 "id": "test",
-                "instance_id": span._get_ctx_item(INPUT_PROMPT)["spans"][0]["meta"]["input"]["prompt"]["instance_id"],
+                "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
                 "name": "test",
                 "version": "1.0.0",
                 "chat_template": [{"role": "user", "content": "test {{value}}"}],
