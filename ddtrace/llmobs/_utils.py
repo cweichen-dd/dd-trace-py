@@ -121,22 +121,7 @@ def _validate_prompt(
             if isinstance(msg, dict):
                 final_chat_template.append(Message(role=msg["role"], content=msg["content"]))
 
-    # Stage 6: Hash Generation
-    instance_id = _get_prompt_instance_id(
-        {
-            "id": final_prompt_id,
-            "name": final_name,
-            "version": final_version,
-            "template": template,
-            "chat_template": final_chat_template,
-            "variables": variables,
-            "rag_context_variables": final_ctx_variable_keys,
-            "rag_query_variables": final_query_variable_keys,
-        },
-        ml_app,
-    )
-
-    # Stage 7: Produce output
+    # Stage 6: Produce output
     validated_prompt: PromptDict = {}
     if final_prompt_id:
         validated_prompt["id"] = final_prompt_id
@@ -154,8 +139,18 @@ def _validate_prompt(
         validated_prompt[INTERNAL_CONTEXT_VARIABLE_KEYS] = final_ctx_variable_keys
     if final_query_variable_keys:
         validated_prompt[INTERNAL_QUERY_VARIABLE_KEYS] = final_query_variable_keys
-    if instance_id:
-        validated_prompt["instance_id"] = instance_id
+
+    # Stage 7: Hash Generation
+    instance_id_str = (
+        f"[{ml_app}]{final_prompt_id}"
+        f"{final_name}{final_version}{template}{final_chat_template}{variables}"
+        f"{final_ctx_variable_keys}{final_query_variable_keys}"
+    )
+
+    hasher = sha256()
+    hasher.update(instance_id_str.encode("utf-8"))
+    instance_id = hasher.hexdigest()
+    validated_prompt["instance_id"] = instance_id
 
     return validated_prompt
 
@@ -184,29 +179,6 @@ def _strict_validate_prompt(prompt: Union[Dict[str, Any], Prompt]):
 
     if template is None and chat_template is None:
         raise ValueError("Either 'template' or 'chat_template' must be provided.")
-
-
-def _get_prompt_instance_id(validated_prompt: dict, ml_app: str = "") -> str:
-    name = validated_prompt.get("name")
-    variables = validated_prompt.get("variables")
-    template = validated_prompt.get("template")
-    chat_template = validated_prompt.get("chat_template")
-    version = validated_prompt.get("version")
-    prompt_id = validated_prompt.get("id")
-    ctx_variable_keys = validated_prompt.get("rag_context_variables")
-    rag_query_variable_keys = validated_prompt.get("rag_query_variables")
-
-    instance_id_str = (
-        f"[{ml_app}]{prompt_id}"
-        f"{name}{prompt_id}{version}{template}{chat_template}{variables}"
-        f"{ctx_variable_keys}{rag_query_variable_keys}"
-    )
-
-    hasher = sha256()
-    hasher.update(instance_id_str.encode("utf-8"))
-    instance_id = hasher.hexdigest()
-
-    return instance_id
 
 
 class LinkTracker:
