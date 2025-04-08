@@ -97,10 +97,7 @@ def _validate_prompt(
         if not isinstance(chat_template, list):
             raise TypeError("'chat_template' must be a list.")
         for ct in chat_template:
-            if not (
-                (isinstance(ct, tuple) and len(ct) == 2 and all(isinstance(e, str) for e in ct))
-                or (isinstance(ct, dict) and all(key in ["role", "content"] for key in ct))
-            ):
+            if not (isinstance(ct, dict) and {"role", "content"}.issubset(ct)):
                 raise TypeError("Each 'chat_template' entry should be Message, tuple[str,str], or dict[str,str].")
 
     if variables is not None:
@@ -123,10 +120,7 @@ def _validate_prompt(
     if chat_template:
         final_chat_template = []
         for msg in chat_template:
-            if isinstance(msg, tuple):
-                role, content = msg
-                final_chat_template.append(Message(role=role, content=content))
-            elif isinstance(msg, dict):
+            if isinstance(msg, dict):
                 final_chat_template.append(Message(role=msg["role"], content=msg["content"]))
 
     # Stage 6: Hash Generation
