@@ -43,7 +43,7 @@ SEMVER_PATTERN_COMPILED = compile(
 PromptDict = Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Message]]]
 
 
-def validate_prompt(
+def _validate_prompt(
     prompt: Union[Dict[str, Any], Prompt], ml_app: str = "", strict_validation: bool = True
 ) -> Dict[str, Any]:
     # Stage 0: Check if dict
@@ -62,7 +62,7 @@ def validate_prompt(
 
     # Stage 2: Strict validations
     if strict_validation:
-        strict_validate_prompt(prompt)
+        _strict_validate_prompt(prompt)
 
     # Stage 3: Set defaults
     final_prompt_id = prompt_id or name or DEFAULT_PROMPT_NAME
@@ -168,7 +168,7 @@ def validate_prompt(
     return validated_prompt
 
 
-def strict_validate_prompt(prompt: Union[Dict[str, Any], Prompt]):
+def _strict_validate_prompt(prompt: Union[Dict[str, Any], Prompt]):
     """
     Validate prompt dictionary under strict validation mode. Ensures that :
     - 'id' is mandatory

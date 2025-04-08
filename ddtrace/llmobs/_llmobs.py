@@ -67,8 +67,8 @@ from ddtrace.llmobs._utils import _get_session_id
 from ddtrace.llmobs._utils import _get_span_name
 from ddtrace.llmobs._utils import _is_evaluation_span
 from ddtrace.llmobs._utils import safe_json
-from ddtrace.llmobs._utils import strict_validate_prompt
-from ddtrace.llmobs._utils import validate_prompt
+from ddtrace.llmobs._utils import _strict_validate_prompt
+from ddtrace.llmobs._utils import _validate_prompt
 from ddtrace.llmobs._writer import LLMObsEvalMetricWriter
 from ddtrace.llmobs._writer import LLMObsSpanWriter
 from ddtrace.llmobs.utils import Documents
@@ -660,7 +660,7 @@ class LLMObs(Service):
             ml_app = _get_ml_app(span)
         if prompt is not None:
             try:
-                validated_prompt = validate_prompt(prompt, _get_ml_app(span))
+                validated_prompt = _validate_prompt(prompt, _get_ml_app(span))
                 self._set_dict_attribute(span, INPUT_PROMPT, validated_prompt)
             except TypeError:
                 log.warning("Failed to validate prompt with error: ", exc_info=True)
@@ -958,7 +958,7 @@ class LLMObs(Service):
             if prompt is not None:
                 try:
                     # strict validation disabled to allow for retro-compatibility
-                    validated_prompt = validate_prompt(prompt, _get_ml_app(span), strict_validation=False)
+                    validated_prompt = _validate_prompt(prompt, _get_ml_app(span), strict_validation=False)
                     cls._set_dict_attribute(span, INPUT_PROMPT, validated_prompt)
                 except TypeError:
                     error = "invalid_prompt"
@@ -1457,7 +1457,7 @@ class LLMObs(Service):
             rag_context_variables=rag_context_variable_keys,
             rag_query_variables=rag_query_variable_keys,
         )
-        strict_validate_prompt(prompt)
+        _strict_validate_prompt(prompt)
         return cls.annotation_context(prompt=prompt)
 
 
