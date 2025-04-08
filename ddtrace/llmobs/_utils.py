@@ -45,7 +45,7 @@ PromptDict = Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]
 
 def _validate_prompt(
     prompt: Union[Dict[str, Any], Prompt], ml_app: str = "", strict_validation: bool = True
-) -> Dict[str, Any]:
+) -> PromptDict:
     # Stage 0: Check if dict
     if not isinstance(prompt, dict):
         raise TypeError(f"Prompt must be a dictionary, got {type(prompt).__name__}.")
