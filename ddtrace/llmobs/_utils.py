@@ -105,8 +105,6 @@ def _validate_prompt(
             raise TypeError(f"'variables' must be Dict, got {type(variables).__name__}")
         if not all(isinstance(k, str) for k in variables):
             raise TypeError("Keys of 'variables' must all be strings.")
-        if not all(isinstance(v, (str, int, float, bool, list, dict)) for v in variables.values()):
-            raise TypeError("Values of 'variables' must be JSON serializable.")
 
     # Stage 5: Transformations
     # Normalize version to full semver (fill minor/patch if omitted)
