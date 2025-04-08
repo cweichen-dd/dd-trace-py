@@ -111,7 +111,7 @@ def _validate_prompt(
     version_parts = (final_version.split(".") + ["0", "0"])[:3]
     final_version = ".".join(version_parts)
     if not SEMVER_PATTERN_COMPILED.match(final_version):
-        log.warning("'version' not semver compatible", final_version)
+        log.warning("'version' not semver compatible", version)
 
     # Ensure chat_template is standardized List[dict[role:str, content:str]]
     final_chat_template = None
