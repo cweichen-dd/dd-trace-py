@@ -7,7 +7,6 @@ from os import environ
 from os import getpid
 import sys
 from threading import RLock
-from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -29,6 +28,7 @@ from ddtrace._trace.provider import DefaultContextProvider
 from ddtrace._trace.sampler import DatadogSampler
 from ddtrace._trace.span import Span
 from ddtrace.appsec._constants import APPSEC
+from ddtrace.appsec._processor import AppSecSpanProcessor
 from ddtrace.constants import _HOSTNAME_KEY
 from ddtrace.constants import ENV_KEY
 from ddtrace.constants import PID
@@ -73,19 +73,13 @@ from ddtrace.settings.peer_service import _ps_config
 from ddtrace.version import get_version
 
 
-try:
-    from ddtrace.appsec._processor import AppSecSpanProcessor
-except ImportError:
-    pass
-
 log = get_logger(__name__)
 
 
 AnyCallable = TypeVar("AnyCallable", bound=Callable)
 
 
-def _start_appsec_processor() -> Optional["AppSecSpanProcessor"]:
-    # FIXME: type should be AppsecSpanProcessor but we have a cyclic import here
+def _start_appsec_processor() -> Optional[AppSecSpanProcessor]:
     try:
         return AppSecSpanProcessor()
     except Exception as e:
