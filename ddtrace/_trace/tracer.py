@@ -7,6 +7,7 @@ from os import environ
 from os import getpid
 import sys
 from threading import RLock
+from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -75,8 +76,7 @@ from ddtrace.version import get_version
 try:
     from ddtrace.appsec._processor import AppSecSpanProcessor
 except ImportError:
-    AppSecSpanProcessor = None
-
+    pass
 
 log = get_logger(__name__)
 
@@ -86,17 +86,21 @@ AnyCallable = TypeVar("AnyCallable", bound=Callable)
 
 def _start_appsec_processor() -> Optional["AppSecSpanProcessor"]:
     # FIXME: type should be AppsecSpanProcessor but we have a cyclic import here
-    if AppSecSpanProcessor is None:
+    try:
+        return AppSecSpanProcessor()
+    except Exception as e:
         # DDAS-001-01
         log.error(
             "[DDAS-001-01] "
             "AppSec could not start because of an unexpected error. No security activities will "
             "be collected. "
             "Please contact support at https://docs.datadoghq.com/help/ for help. Error details: "
-            "AppSecSpanProcessor not found.",
+            "\n%s",
+            repr(e),
         )
-        return None
-    return AppSecSpanProcessor()
+        if config._raise:
+            raise
+    return None
 
 
 def _default_span_processors_factory(
