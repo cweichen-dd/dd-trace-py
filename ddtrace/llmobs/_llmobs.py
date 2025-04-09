@@ -1439,7 +1439,7 @@ class LLMObs(Service):
         version: str = "1.0.0",
         prompt_id: Optional[str] = None,
         template: Optional[str] = None,
-        chat_template: Optional[Union[List[Tuple[str, str]], List[Message]]] = None,
+        chat_template: Optional[Union[List[Dict[str, str]], List[Message]]] = None,
         variables: Optional[Dict[str, Any]] = None,
         rag_context_variable_keys: Optional[List[str]] = None,
         rag_query_variable_keys: Optional[List[str]] = None,
