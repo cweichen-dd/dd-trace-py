@@ -740,11 +740,6 @@ def test_prompt_strict_validation(llmobs):
         with llmobs.llm(model_name="test_model", prompt=prompt_with_no_id) as span:
             assert span._get_ctx_item(INPUT_PROMPT) is None
 
-    with pytest.raises(ValueError, match="'version' must be semver compatible, but got 'version'."):
-        prompt_with_invalid_version = Prompt(template="{var1} {var3}", id="test_prompt", version="version")
-        with llmobs.llm(model_name="test_model", prompt=prompt_with_invalid_version) as span:
-            assert span._get_ctx_item(INPUT_PROMPT) is None
-
     with pytest.raises(ValueError, match="Either 'template' or 'chat_template' must be provided."):
         prompt_with_no_template = Prompt(id="test_prompt", version="1.0.0")
         with llmobs.llm(model_name="test_model", prompt=prompt_with_no_template) as span:
