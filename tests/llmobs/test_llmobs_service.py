@@ -1680,7 +1680,7 @@ def test_llm_annotation_modifies_prompt(llmobs, llmobs_backend):
         name="test",
         id="test",
         template="test {{value}}",
-        chat_template=[("user", "test {{value}}")],
+        chat_template=[{"role": "user", "content": "test {{value}}"}],
         variables={"value": "test"},
     )
     with llmobs.llm(name="test_agent", model_name="test", prompt=prompt) as span:

@@ -885,7 +885,7 @@ class LLMObs(Service):
         :param prompt: A dictionary that represents the prompt used for an LLM call in the following form:
                         `{
                             "template": "...",
-                            "chat_template": [{"content": "...", "role": "..."}, ...], (or [("...", "..."), ...])
+                            "chat_template": [{"content": "...", "role": "..."}, ...])
                             "id": "...",
                             "version": "...",
                             "variables": {"variable_1": "...", ...}
