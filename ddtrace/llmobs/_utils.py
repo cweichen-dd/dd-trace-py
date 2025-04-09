@@ -175,7 +175,7 @@ def _strict_validate_prompt(prompt: Union[Dict[str, Any], Prompt]):
         version_parts = (version.split(".") + ["0", "0"])[:3]
         final_version = ".".join(version_parts)
         if not SEMVER_PATTERN_COMPILED.match(final_version):
-            raise ValueError(f"'version' must be semver compatible, but got '{version}'.")
+            log.warning("'version' must be semver compatible, but got '{version}'.")
 
     if template is None and chat_template is None:
         raise ValueError("Either 'template' or 'chat_template' must be provided.")
