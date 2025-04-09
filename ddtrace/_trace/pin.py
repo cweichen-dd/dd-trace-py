@@ -98,6 +98,20 @@ class Pin(object):
             return obj.__class__._datadog_pin
         return None
 
+    @staticmethod
+    def _get_config(obj: Any) -> Dict[str, Any]:
+        """Retrieves the configuration for the given object.
+        Any object that has an attached `Pin` must have a configuration
+        and if a wrong object is given, an empty `dict` is returned
+        for safety reasons.
+        """
+        pin = Pin.get_from(obj)
+        if pin is None:
+            log.debug("No configuration found for %s", obj)
+            return {}
+
+        return pin._config
+
     @classmethod
     def override(
         cls,
