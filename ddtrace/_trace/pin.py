@@ -92,11 +92,17 @@ class Pin(object):
         the object, it will be returned. Otherwise, if a pin is attached to the
         object's type, it will be returned. Otherwise, None is returned.
         """
-        if hasattr(obj, "_datadog_pin"):
-            return obj._datadog_pin
-        if hasattr(obj, "__class__") and hasattr(obj.__class__, "_datadog_pin"):
-            return obj.__class__._datadog_pin
-        return None
+        if hasattr(obj, "__getddpin__"):
+            return obj.__getddpin__()
+
+        pin_name = _DD_PIN_PROXY_NAME if isinstance(obj, wrapt.ObjectProxy) else _DD_PIN_NAME
+        pin = getattr(obj, pin_name, None)
+        # detect if the PIN has been inherited from a class
+        if pin is not None and pin._target != id(obj):
+            pin = pin.clone()
+            pin.onto(obj)
+        return pin
+
 
     @staticmethod
     def _get_config(obj: Any) -> Dict[str, Any]:
