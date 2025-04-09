@@ -98,7 +98,7 @@ def _validate_prompt(
             raise TypeError("'chat_template' must be a list.")
         for ct in chat_template:
             if not (isinstance(ct, dict) and {"role", "content"}.issubset(ct)):
-                raise TypeError("Each 'chat_template' entry should be Message, tuple[str,str], or dict[str,str].")
+                raise TypeError("Each 'chat_template' entry should be dict[str,str] with role and content keys.")
 
     if variables is not None:
         if not isinstance(variables, dict):

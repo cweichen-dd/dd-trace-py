@@ -43,7 +43,7 @@ class Prompt(TypedDict, total=False):
     version: Optional[str]
     id: Optional[str]
     template: Optional[str]
-    chat_template: Optional[Union[List[Tuple[str, str]], List[Message]]]
+    chat_template: Optional[Union[List[Dict[str, str]], List[Message]]]
     variables: Optional[Dict[str, str]]
     rag_context_variables: Optional[List[str]]
     rag_query_variables: Optional[List[str]]

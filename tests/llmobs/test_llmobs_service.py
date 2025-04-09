@@ -767,7 +767,7 @@ def test_prompt_instance_id_generation(llmobs):
     ) as span:
         assert (
             span._get_ctx_item(INPUT_PROMPT)["instance_id"]
-            == "7f4e0b5bc6a4d6218fe9bec81727b3919c9856d14bf3e9cacf6648016ff21f0f"
+            == "40a9b1a55227474f3bbded5069e232ee69d67b85c428f9c95c088e3b53e716c3"
         )
 
 
@@ -1658,7 +1658,7 @@ def test_prompt_context_modifies_prompt(llmobs, llmobs_backend):
         name="test",
         prompt_id="test",
         template="test {{value}}",
-        chat_template=[("user", "test {{value}}")],
+        chat_template=[{"role": "user", "content": "test {{value}}"}],
         variables={"value": "test"},
     ):
         with llmobs.llm(name="test_agent", model_name="test") as span:
