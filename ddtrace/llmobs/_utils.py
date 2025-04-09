@@ -79,10 +79,7 @@ def _validate_prompt(
         raise TypeError(f"'name' must be str, got {type(final_name).__name__}.")
 
     if not isinstance(final_version, str):
-        try:
-            final_version = str(final_version)
-        except Exception:
-            raise TypeError(f"'version' must be str, got {type(final_version).__name__}.")
+        raise TypeError(f"'version' must be str, got {type(final_version).__name__}.")
 
     if not (isinstance(final_ctx_variable_keys, list) and all(isinstance(i, str) for i in final_ctx_variable_keys)):
         raise TypeError("'rag_context_variables' must be a List[str].")
@@ -169,13 +166,6 @@ def _strict_validate_prompt(prompt: Union[Dict[str, Any], Prompt]):
 
     if prompt_id is None:
         raise ValueError("'id' must be provided")
-
-    if version is not None:
-        # Normalize version to full semver (fill minor/patch if omitted)
-        version_parts = (version.split(".") + ["0", "0"])[:3]
-        final_version = ".".join(version_parts)
-        if not SEMVER_PATTERN_COMPILED.match(final_version):
-            log.warning("'version' must be semver compatible, but got '{version}'.")
 
     if template is None and chat_template is None:
         raise ValueError("Either 'template' or 'chat_template' must be provided.")
