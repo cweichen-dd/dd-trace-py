@@ -168,13 +168,13 @@ def _strict_validate_prompt(prompt: Union[Dict[str, Any], Prompt]):
     chat_template = prompt.get("chat_template")
 
     if prompt_id is None:
-        raise ValueError("'id' is mandatory under strict validation.")
+        raise ValueError("'id' must be provided")
 
     if version is not None:
         # Normalize version to full semver (fill minor/patch if omitted)
         version_parts = (version.split(".") + ["0", "0"])[:3]
-        version = ".".join(version_parts)
-        if not SEMVER_PATTERN_COMPILED.match(version):
+        final_version = ".".join(version_parts)
+        if not SEMVER_PATTERN_COMPILED.match(final_version):
             raise ValueError(f"'version' must be semver compatible, but got '{version}'.")
 
     if template is None and chat_template is None:
