@@ -156,11 +156,9 @@ def _strict_validate_prompt(prompt: Union[Dict[str, Any], Prompt]):
     """
     Validate prompt dictionary under strict validation mode. Ensures that :
     - 'id' is mandatory
-    - 'version' is semver compatible
     - 'template' or 'chat_template' is mandatory
     """
     prompt_id = prompt.get("id")
-    version = prompt.get("version")
     template = prompt.get("template")
     chat_template = prompt.get("chat_template")
 
