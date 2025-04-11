@@ -19,6 +19,9 @@ log = get_logger(__name__)
 _DD_CONTEXTVAR: contextvars.ContextVar[Optional[Union[Context, Span]]] = contextvars.ContextVar(
     "datadog_contextvar", default=None
 )
+_DD_DEFAULT_CONTEXTVAR: contextvars.ContextVar[Optional[Context]] = contextvars.ContextVar(
+    "datadog_default_contextvar", default=None
+)
 
 
 class BaseContextProvider(metaclass=abc.ABCMeta):
@@ -109,8 +112,6 @@ class DefaultContextProvider(BaseContextProvider, DatadogContextMixin):
     that support contextvars.
     """
 
-    _default_context: Optional[Context] = None
-
     def __init__(self) -> None:
         super(DefaultContextProvider, self).__init__()
 
@@ -129,17 +130,18 @@ class DefaultContextProvider(BaseContextProvider, DatadogContextMixin):
         item = _DD_CONTEXTVAR.get()
         if isinstance(item, Span):
             return self._update_active(item)
-        return item or self._default_context
+        return item or _DD_DEFAULT_CONTEXTVAR.get()
 
     @contextmanager
     def _with_default_context(self, ctx: Optional[Context]) -> Generator[None, None, None]:
         current_ctx = self.active()
-        current_default = self._default_context
+        current_default = _DD_DEFAULT_CONTEXTVAR.get()
 
         self.activate(ctx)
-        self._default_context = ctx
+        _DD_DEFAULT_CONTEXTVAR.set(ctx)
         try:
             yield
         finally:
-            self._default_context = current_default
+            # Restore the original context
+            _DD_DEFAULT_CONTEXTVAR.set(current_default)
             self.activate(current_ctx)
