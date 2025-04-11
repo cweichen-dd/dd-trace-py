@@ -1,5 +1,5 @@
 import pytest
-
+import mock
 from ddtrace.ext import SpanTypes
 from ddtrace.llmobs import _constants as const
 from ddtrace.llmobs._constants import PARENT_ID_KEY
@@ -281,7 +281,7 @@ def test_structured_prompt_data_v1(llmobs, llmobs_backend):
         "prompt": {
             "id": "unnamed_prompt",
             "name": "unnamed_prompt",
-            "instance_id": events[0]["spans"][0]["meta"]["input"]["prompt"]["instance_id"],
+            "instance_id": mock.ANY,
             "template": "test {{value}}",
             "_dd_context_variable_keys": ["context"],
             "_dd_query_variable_keys": ["question"],
@@ -308,7 +308,7 @@ def test_structured_prompt_data_v2(llmobs, llmobs_backend):
     assert events[0]["spans"][0]["meta"]["input"] == {
         "prompt": {
             "id": "test",
-            "instance_id": events[0]["spans"][0]["meta"]["input"]["prompt"]["instance_id"],
+            "instance_id": mock.ANY,
             "name": "test",
             "version": "1.0.0",
             "chat_template": [{"role": "user", "content": "test {{value}}"}],

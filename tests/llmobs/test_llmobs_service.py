@@ -678,7 +678,7 @@ def test_annotate_prompt_dict(llmobs):
             "version": "1.0.0",
             "id": "test_prompt",
             "name": "test_prompt",
-            "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
+            "instance_id": mock.ANY,
             "_dd_context_variable_keys": ["context"],
             "_dd_query_variable_keys": ["question"],
         }
@@ -703,7 +703,7 @@ def test_annotate_prompt_dict_with_context_var_keys(llmobs):
             "version": "1.0.0",
             "id": "test_prompt",
             "name": "test_prompt",
-            "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
+            "instance_id": mock.ANY,
             "_dd_context_variable_keys": ["var1", "var2"],
             "_dd_query_variable_keys": ["user_input"],
         }
@@ -723,7 +723,7 @@ def test_annotate_prompt_typed_dict(llmobs):
             ),
         )
         assert span._get_ctx_item(INPUT_PROMPT) == {
-            "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
+            "instance_id": mock.ANY,
             "template": "{var1} {var3}",
             "variables": {"var1": "var1", "var2": "var3"},
             "version": "1.0.0",
@@ -781,7 +781,7 @@ def test_prompt_in_llm_annotation(llmobs):
     ) as span:
         assert span._get_ctx_item(INPUT_PROMPT) == {
             "template": "{var1} {var3}",
-            "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
+            "instance_id": mock.ANY,
             "chat_template": [{"role": "user", "content": "{var1} {var3}"}],
             "variables": {"var1": "var1", "var2": "var3"},
             "version": "1.0.0",
@@ -1639,7 +1639,7 @@ def test_annotation_context_modifies_prompt(llmobs):
         with llmobs.llm(name="test_agent", model_name="test") as span:
             assert span._get_ctx_item(INPUT_PROMPT) == {
                 "id": "unnamed_prompt",
-                "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
+                "instance_id": mock.ANY,
                 "name": "unnamed_prompt",
                 "template": "test_template",
                 "_dd_context_variable_keys": ["context"],
@@ -1659,7 +1659,7 @@ def test_prompt_context_modifies_prompt(llmobs, llmobs_backend):
         with llmobs.llm(name="test_agent", model_name="test") as span:
             assert span._get_ctx_item(INPUT_PROMPT) == {
                 "id": "test",
-                "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
+                "instance_id": mock.ANY,
                 "name": "test",
                 "version": "1.0.0",
                 "chat_template": [{"role": "user", "content": "test {{value}}"}],
@@ -1681,7 +1681,7 @@ def test_llm_annotation_modifies_prompt(llmobs, llmobs_backend):
     with llmobs.llm(name="test_agent", model_name="test", prompt=prompt) as span:
         assert span._get_ctx_item(INPUT_PROMPT) == {
             "id": "test",
-            "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
+            "instance_id": mock.ANY,
             "name": "test",
             "version": "1.0.0",
             "chat_template": [{"role": "user", "content": "test {{value}}"}],
@@ -1831,7 +1831,7 @@ async def test_annotation_context_async_modifies_prompt(llmobs):
         with llmobs.llm(name="test_agent", model_name="test") as span:
             assert span._get_ctx_item(INPUT_PROMPT) == {
                 "id": "unnamed_prompt",
-                "instance_id": span._get_ctx_item(INPUT_PROMPT)["instance_id"],
+                "instance_id": mock.ANY,
                 "name": "unnamed_prompt",
                 "template": "test_template",
                 "_dd_context_variable_keys": ["context"],
