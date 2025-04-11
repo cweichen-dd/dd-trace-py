@@ -1444,7 +1444,7 @@ class LLMObs(Service):
         rag_query_variable_keys: Optional[List[str]] = None,
     ) -> AnnotationContext:
         """
-        shortcut to create a prompt or pass a prompt object and annotate it
+        Creates an annotation context with a `Prompt` constructed on the following
         """
         prompt = Prompt(
             name=name,
