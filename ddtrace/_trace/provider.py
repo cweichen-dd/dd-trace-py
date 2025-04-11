@@ -1,7 +1,9 @@
 import abc
 import contextvars
+from contextlib import contextmanager
 from typing import Any
 from typing import Callable
+from typing import Generator
 from typing import Optional
 from typing import Union
 
@@ -107,6 +109,8 @@ class DefaultContextProvider(BaseContextProvider, DatadogContextMixin):
     that support contextvars.
     """
 
+    _default_context: Optional[Context] = None
+
     def __init__(self) -> None:
         super(DefaultContextProvider, self).__init__()
 
@@ -125,4 +129,17 @@ class DefaultContextProvider(BaseContextProvider, DatadogContextMixin):
         item = _DD_CONTEXTVAR.get()
         if isinstance(item, Span):
             return self._update_active(item)
-        return item
+        return item or self._default_context
+
+    @contextmanager
+    def _with_default_context(self, ctx: Optional[Context]) -> Generator[None, None, None]:
+        current_ctx = self.active()
+        current_default = self._default_context
+
+        self.activate(ctx)
+        self._default_context = ctx
+        try:
+            yield
+        finally:
+            self._default_context = current_default
+            self.activate(current_ctx)
