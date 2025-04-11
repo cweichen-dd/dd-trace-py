@@ -40,12 +40,12 @@ SEMVER_PATTERN_COMPILED = compile(
     r"(?:\.[0-9a-zA-Z-]+)*))?$"
 )
 
-PromptDict = Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Message]]]
+ValidatedPromptDict = Dict[str, Union[str, Dict[str, Any], List[str], List[Dict[str, str]], List[Message]]]
 
 
 def _validate_prompt(
     prompt: Union[Dict[str, Any], Prompt], ml_app: str = "", strict_validation: bool = True
-) -> PromptDict:
+) -> ValidatedPromptDict:
     # Stage 0: Check if dict
     if not isinstance(prompt, dict):
         raise TypeError(f"Prompt must be a dictionary, got {type(prompt).__name__}.")
@@ -119,7 +119,7 @@ def _validate_prompt(
                 final_chat_template.append(Message(role=msg["role"], content=msg["content"]))
 
     # Stage 6: Produce output
-    validated_prompt: PromptDict = {}
+    validated_prompt: ValidatedPromptDict = {}
     if final_prompt_id:
         validated_prompt["id"] = final_prompt_id
     if final_name:
