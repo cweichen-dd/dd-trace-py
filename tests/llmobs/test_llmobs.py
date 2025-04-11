@@ -1,5 +1,6 @@
-import pytest
 import mock
+import pytest
+
 from ddtrace.ext import SpanTypes
 from ddtrace.llmobs import _constants as const
 from ddtrace.llmobs._constants import PARENT_ID_KEY
