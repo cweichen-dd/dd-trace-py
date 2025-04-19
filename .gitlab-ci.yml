@@ -64,7 +64,7 @@ run-tests-trigger:
 
 microbenchmarks:
   stage: benchmarks
-  needs: [ "download_ddtrace_artifacts" ]
+  needs: [ "build ddtrace linux" ]
   rules:
     - if: $RELEASE_ALLOW_BENCHMARK_FAILURES == "true"
       allow_failure: true
@@ -113,7 +113,7 @@ requirements_json_test:
     REQUIREMENTS_ALLOW_JSON_PATH: ".gitlab/requirements_allow.json"
 
 package-oci:
-  needs: [ download_dependency_wheels, download_ddtrace_artifacts ]
+  needs: [ "build ddtrace linux" ]
 
 promote-oci-to-prod:
   stage: release

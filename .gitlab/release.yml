@@ -25,23 +25,23 @@ variables:
       ./aws/install
     - export TWINE_PASSWORD=$(aws ssm get-parameter --region us-east-1 --name "ci.${CI_PROJECT_NAME}.${PYPI_REPOSITORY}_token" --with-decryption --query "Parameter.Value" --out text)
     - python -m pip install twine
-    - python -m twine check --strict pywheels/*
+    - python -m twine check --strict wheelhouse/*
   script:
-    - python -m twine upload --repository ${PYPI_REPOSITORY} pywheels/*
+    - python -m twine upload --repository ${PYPI_REPOSITORY} wheelhouse/*
   artifacts:
     paths:
-      - pywheels/*.whl
-      - pywheels/*.tar.gz
+      - wheelhouse/*.whl
+      - wheelhouse/*.tar.gz
 
 # Can be used to validate uploading of artifacts
 # release_pypi_test:
 #   extends: .release_pypi
-#   dependencies: [ "download_ddtrace_artifacts" ]
+#   dependencies: [ "build ddtrace sdist", "build ddtrace linux" ]
 #   variables:
 #     PYPI_REPOSITORY: testpypi
 
 release_pypi_prod:
   extends: .release_pypi
-  dependencies: [ "download_ddtrace_artifacts" ]
+  dependencies: [ "build ddtrace sdist", "build ddtrace linux" ]
   variables:
     PYPI_REPOSITORY: pypi

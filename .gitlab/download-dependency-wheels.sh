@@ -6,21 +6,26 @@ if [ -z "$CI_COMMIT_SHA" ]; then
   exit 1
 fi
 
-python3 -m pip install -U "pip>=22.0"
-python3 -m pip install packaging
+python_bin="${1}"
+arch="${2}"
+platform="${3}"
 
-mkdir pywheels-dep
+$python_bin -m pip install -U "pip>=22.0"
+$python_bin -m pip install packaging
 
-cd pywheels
+mkdir wheelhouse-dep
+
+cd wheelhouse
 
 export PYTHONUNBUFFERED=TRUE
 
-../lib-injection/dl_wheels.py \
-    --python-version=$PYTHON_VERSION \
+python_major_minor=$(echo $($python_bin -c 'import sys; print(".".join(map(str, sys.version_info[:2])))'))
+
+$python_bin \
+    ../lib-injection/dl_wheels.py \
+    --python-version=$python_major_minor \
     --local-ddtrace \
-    --arch x86_64 \
-    --arch aarch64 \
-    --platform musllinux_1_2 \
-    --platform manylinux2014 \
-    --output-dir ../pywheels-dep \
+    --arch "${arch}" \
+    --platform "${platform}" \
+    --output-dir ../wheelhouse-dep \
     --verbose
