@@ -57,8 +57,11 @@ variables:
     CARGO_BUILD_JOBS: 12
     SYSTEM_VERSION_COMPAT: 0
     PIP_CACHE_DIR: ${CI_PROJECT_DIR}/.cache/pip
-    PIP_VERBOSE: 1
     CARGO_HOME: ${CI_PROJECT_DIR}/.cache/cargo
+    PIP_LOG: "${CI_PROJECT_DIR}/wheelhouse-debug/${CI_JOB_NAME_SLUG}.pip_debug.log"
+    PIP_DISABLE_PIP_VERSION_CHECK: 1
+    _DD_DEBUG_EXT: "1"
+    _DD_DEBUG_EXT_LOG: "${CI_PROJECT_DIR}/wheelhouse-debug/${CI_JOB_NAME_SLUG}.debug_ext_metadata.log"
   cache:
     - key: v0-${CI_JOB_NAME_SLUG}-cache
       paths:
@@ -89,25 +92,72 @@ variables:
     paths:
       - wheelhouse/
 
-"build ddtrace linux":
+"build ddtrace linux x86_64":
   extends: .build_ddtrace_base
   image: "${PYPA_IMAGE_BASE}/${PLATFORM}_${ARCH}:${PYPA_IMAGE_TAG}"
-  tags: [ "${RUNNER}" ]
+  tags: [ "arch:amd64" ]
   parallel:
     matrix:
       - PLATFORM: *linux_platforms
         PYTHON_TAG: *python_tags
-        ARCH: "x86_64"
-        RUNNER: "arch:amd64"
-      # Use docker-in-docker:amd64 for i686 since we don't have a k8s linux/386 runner
+  variables:
+    ARCH: "x86_64"
+  before_script:
+    - !reference [ .setup_rust ]
+    - !reference [ .setup_python ]
+  script:
+    - |
+      # Build the wheel
+      echo -e "\e[0Ksection_start:`date +%s`:build_wheel[collapsed=true]\r\e[0KBuild ddtrace wheel"
+      echo "pip debug log: ${PIP_LOG}"
+      echo "------ DDTRACE STARTING PIP WHEEL BUILD ------" >> "${PIP_LOG}"
+      /opt/python/${PYTHON_TAG}/bin/python -m pip wheel "${CI_PROJECT_DIR}" --debug --no-deps --wheel-dir wheelhouse/
+      /opt/python/${PYTHON_TAG}/bin/python -m twine check --strict wheelhouse/*
+      echo -e "\e[0Ksection_end:`date +%s`:build_wheel\r\e[0K"
+    - |
+      #Repair the wheel
+      echo -e "\e[0Ksection_start:`date +%s`:repair_wheel[collapsed=true]\r\e[0KRepair ddtrace wheel"
+      ./.gitlab/repair_wheel_linux.sh wheelhouse/
+      echo -e "\e[0Ksection_end:`date +%s`:repair_wheel\r\e[0K"
+    - |
+      # Download wheel dependencies (x86_64 and aarch64)
+      echo -e "\e[0Ksection_start:`date +%s`:download_wheel_dependencies[collapsed=true]\r\e[0KDownload wheel dependencies"
+      if [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "aarch64" ];
+      then
+        .gitlab/download-dependency-wheels.sh "/opt/python/${PYTHON_TAG}/bin/python" "${ARCH}" "${PLATFORM}"
+      fi
+
+      # Remove ddtrace from the pip cache so it doesn't get uploaded to the gitlab cache
+      /opt/python/${PYTHON_TAG}/bin/python -m pip cache remove ddtrace
+      echo -e "\e[0Ksection_end:`date +%s`:download_wheel_dependencies\r\e[0K"
+  artifacts:
+    name: wheelhouse-${PYTHON_TAG}-${PLATFORM}_${ARCH}
+    when: always
+    paths:
+      - wheelhouse/
+      - wheelhouse-dep/
+      - wheelhouse-debug/
+
+"build ddtrace linux aarch64":
+  extends: "build ddtrace linux x86_64"
+  image: "${PYPA_IMAGE_BASE}/${PLATFORM}_${ARCH}:${PYPA_IMAGE_TAG}"
+  tags: [ "arch:arm64" ]
+  parallel:
+    matrix:
       - PLATFORM: *linux_platforms
         PYTHON_TAG: *python_tags
-        ARCH: "i686"
-        RUNNER: "docker-in-docker:amd64"
+  variables:
+    ARCH: "aarch64"
+
+"build ddtrace linux i686":
+  extends: .build_ddtrace_base
+  tags: [ "docker-in-docker:amd64" ]
+  parallel:
+    matrix:
       - PLATFORM: *linux_platforms
         PYTHON_TAG: *python_tags
-        ARCH: "aarch64"
-        RUNNER: "arch:arm64"
+  variables:
+    ARCH: "i686"
   before_script:
     - !reference [ .setup_rust ]
     - !reference [ .setup_python ]

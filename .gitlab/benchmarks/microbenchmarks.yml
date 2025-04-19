@@ -118,7 +118,11 @@ candidate:
   tags: [ "arch:amd64" ]
   needs:
     - pipeline: $PARENT_PIPELINE_ID
-      job: download_ddtrace_artifacts
+      job: "build ddtrace linux x86_64"
+      parallel:
+        matrix:
+          - PLATFORM: manylinux2014
+            PYTHON_TAG: cp39-cp39
   script: |
     cp wheelhouse/*-cp39-cp39-manylinux_*_x86_64*.whl ./
     echo "CANDIDATE_WHL=$(ls *.whl | head -n 1)" | tee candidate.env

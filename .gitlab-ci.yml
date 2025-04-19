@@ -64,7 +64,12 @@ run-tests-trigger:
 
 microbenchmarks:
   stage: benchmarks
-  needs: [ "build ddtrace linux" ]
+  needs:
+    - job: "build ddtrace linux x86_64"
+      parallel:
+        matrix:
+          - PLATFORM: manylinux2014
+            PYTHON_TAG: cp39-cp39
   rules:
     - if: $RELEASE_ALLOW_BENCHMARK_FAILURES == "true"
       allow_failure: true
@@ -113,7 +118,7 @@ requirements_json_test:
     REQUIREMENTS_ALLOW_JSON_PATH: ".gitlab/requirements_allow.json"
 
 package-oci:
-  needs: [ "build ddtrace linux" ]
+  needs: [ "build ddtrace linux x86_64", "build ddtrace linux aarch64", "build ddtrace linux i686" ]
 
 promote-oci-to-prod:
   stage: release

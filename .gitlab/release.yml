@@ -36,12 +36,20 @@ variables:
 # Can be used to validate uploading of artifacts
 # release_pypi_test:
 #   extends: .release_pypi
-#   dependencies: [ "build ddtrace sdist", "build ddtrace linux" ]
+#   dependencies:
+#     - "build ddtrace sdist"
+#     - "build ddtrace linux x86_64"
+#     - "build ddtrace linux aarch64"
+#     - "build ddtrace linux i686"
 #   variables:
 #     PYPI_REPOSITORY: testpypi
 
 release_pypi_prod:
   extends: .release_pypi
-  dependencies: [ "build ddtrace sdist", "build ddtrace linux" ]
+  dependencies:
+    - "build ddtrace sdist"
+    - "build ddtrace linux x86_64"
+    - "build ddtrace linux aarch64"
+    - "build ddtrace linux i686"
   variables:
     PYPI_REPOSITORY: pypi
