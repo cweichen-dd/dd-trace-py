@@ -17,14 +17,10 @@ static char** cached_packages = NULL;
 static size_t cached_packages_count = 0;
 
 /* Static Lists */
-static size_t static_allowlist_count = 20;
-static const char* static_allowlist[] = { "attrs.",      "beautifulsoup4.", "cachetools.", "cryptography.",
-                                          "django.",     "docutils.",       "idna.",       "iniconfig.",
-                                          "jinja2.",     "lxml.",           "multidict.",  "platformdirs.",
-                                          "pygments.",   "pynacl.",         "pyparsing.",  "multipart",
-                                          "sqlalchemy.", "tomli.",          "yarl.",       "python_multipart." };
+static const char* static_allowlist[] = { "jinja2.", "pygments.",   "multipart.", "sqlalchemy.", "python_multipart.",
+                                          "attrs.",  "jsonschema.", "s3fs.",      "mysql.",      "pymysql." };
+static const size_t static_allowlist_count = sizeof(static_allowlist) / sizeof(static_allowlist[0]);
 
-static size_t static_denylist_count = 145;
 static const char* static_denylist[] = { "django.apps.config.",
                                          "django.apps.registry.",
                                          "django.conf.",
@@ -170,226 +166,65 @@ static const char* static_denylist[] = { "django.apps.config.",
                                          "django_filters.rest_framework.filterset.",
                                          "django_filters.utils.",
                                          "django_filters.widgets." };
+static const size_t static_denylist_count = sizeof(static_denylist) / sizeof(static_denylist[0]);
 
-static size_t static_stdlib_count = 216;
 static const char* static_stdlib_denylist[] = {
-    "__future__",
-    "_ast",
-    "_compression",
-    "_thread",
-    "abc",
-    "aifc",
-    "argparse",
-    "array",
-    "ast",
-    "asynchat",
-    "asyncio",
-    "asyncore",
-    "atexit",
-    "audioop",
-    "base64",
-    "bdb",
-    "binascii",
-    "bisect",
-    "builtins",
-    "bz2",
-    "cProfile",
-    "calendar",
-    "cgi",
-    "cgitb",
-    "chunk",
-    "cmath",
-    "cmd",
-    "code",
-    "codecs",
-    "codeop",
-    "collections",
-    "colorsys",
-    "compileall",
-    "concurrent",
-    "configparser",
-    "contextlib",
-    "contextvars",
-    "copy",
-    "copyreg",
-    "crypt",
-    "csv",
-    "ctypes",
-    "curses",
-    "dataclasses",
-    "datetime",
-    "dbm",
-    "decimal",
-    "difflib",
-    "dis",
-    "distutils",
-    "doctest",
-    "email",
-    "encodings",
-    "ensurepip",
-    "enum",
-    "errno",
-    "faulthandler",
-    "fcntl",
-    "filecmp",
-    "fileinput",
-    "fnmatch",
-    "fractions",
-    "ftplib",
-    "functools",
-    "gc",
-    "getopt",
-    "getpass",
-    "gettext",
-    "glob",
-    "graphlib",
-    "grp",
-    "gzip",
-    "hashlib",
-    "heapq",
-    "hmac",
-    "html",
-    "http",
-    "idlelib",
-    "imaplib",
-    "imghdr",
-    "imp",
-    "importlib",
-    "inspect",
-    "io",
-    "_io",
-    "ipaddress",
-    "itertools",
-    "json",
-    "keyword",
-    "lib2to3",
-    "linecache",
-    "locale",
-    "logging",
-    "lzma",
-    "mailbox",
-    "mailcap",
-    "marshal",
-    "math",
-    "mimetypes",
-    "mmap",
-    "modulefinder",
-    "msilib",
-    "msvcrt",
-    "multiprocessing",
-    "netrc",
-    "nis",
-    "nntplib",
-    "ntpath",
-    "numbers",
-    "opcode",
-    "operator",
-    "optparse",
-    "os",
-    "ossaudiodev",
-    "pathlib",
-    "pdb",
-    "pickle",
-    "pickletools",
-    "pipes",
-    "pkgutil",
-    "platform",
-    "plistlib",
-    "poplib",
-    "posix",
-    "posixpath",
-    "pprint",
-    "profile",
-    "pstats",
-    "pty",
-    "pwd",
-    "py_compile",
-    "pyclbr",
-    "pydoc",
-    "queue",
-    "quopri",
-    "random",
-    "re",
-    "readline",
-    "reprlib",
-    "resource",
-    "rlcompleter",
-    "runpy",
-    "sched",
-    "secrets",
-    "select",
-    "selectors",
-    "shelve",
-    "shlex",
-    "shutil",
-    "signal",
-    "site",
-    "smtpd",
-    "smtplib",
-    "sndhdr",
-    "socket",
-    "socketserver",
-    "spwd",
-    "sqlite3",
-    "sre",
-    "sre_compile",
-    "sre_constants",
-    "sre_parse",
-    "ssl",
-    "stat",
-    "statistics",
-    "string",
-    "stringprep",
-    "struct",
-    "subprocess",
-    "sunau",
-    "symtable",
-    "sys",
-    "sysconfig",
-    "syslog",
-    "tabnanny",
-    "tarfile",
-    "telnetlib",
-    "tempfile",
-    "termios",
-    "test",
-    "textwrap",
-    "threading",
-    "time",
-    "timeit",
-    "tkinter",
-    "token",
-    "tokenize",
-    "tomllib",
-    "trace",
-    "traceback",
-    "tracemalloc",
-    "tty",
-    "turtle",
-    "turtledemo",
-    "types",
-    "typing",
-    "unicodedata",
-    "unittest",
-    "uu",
-    "uuid",
-    "venv",
-    "warnings",
-    "wave",
-    "weakref",
-    "webbrowser",
-    "winreg",
-    "winsound",
-    "wsgiref",
-    "xdrlib",
-    "xml",
-    "xmlrpc",
-    "zipapp",
-    "zipfile",
-    "zipimport",
-    "zlib",
-    "zoneinfo",
+    "__future__",   "_ast",        "_compression", "_thread",
+    "abc",          "aifc",        "argparse",     "array",
+    "ast",          "asynchat",    "asyncio",      "asyncore",
+    "atexit",       "audioop",     "base64",       "bdb",
+    "binascii",     "bisect",      "builtins",     "bz2",
+    "cProfile",     "calendar",    "cgi",          "cgitb",
+    "chunk",        "cmath",       "cmd",          "code",
+    "codecs",       "codeop",      "collections",  "colorsys",
+    "compileall",   "concurrent",  "configparser", "contextlib",
+    "contextvars",  "copy",        "copyreg",      "crypt",
+    "csv",          "ctypes",      "curses",       "dataclasses",
+    "datetime",     "dbm",         "decimal",      "difflib",
+    "dis",          "distutils",   "doctest",      "email",
+    "encodings",    "ensurepip",   "enum",         "errno",
+    "faulthandler", "fcntl",       "filecmp",      "fileinput",
+    "fnmatch",      "fractions",   "ftplib",       "functools",
+    "gc",           "getopt",      "getpass",      "gettext",
+    "glob",         "graphlib",    "grp",          "gzip",
+    "hashlib",      "heapq",       "hmac",         "html",
+    "http",         "idlelib",     "imaplib",      "imghdr",
+    "imp",          "importlib",   "inspect",      "io",
+    "_io",          "ipaddress",   "itertools",    "json",
+    "keyword",      "lib2to3",     "linecache",    "locale",
+    "logging",      "lzma",        "mailbox",      "mailcap",
+    "marshal",      "math",        "mimetypes",    "mmap",
+    "modulefinder", "msilib",      "msvcrt",       "multiprocessing",
+    "netrc",        "nis",         "nntplib",      "ntpath",
+    "numbers",      "opcode",      "operator",     "optparse",
+    "os",           "ossaudiodev", "pathlib",      "pdb",
+    "pickle",       "pickletools", "pipes",        "pkgutil",
+    "platform",     "plistlib",    "poplib",       "posix",
+    "posixpath",    "pprint",      "profile",      "pstats",
+    "pty",          "pwd",         "py_compile",   "pyclbr",
+    "pydoc",        "queue",       "quopri",       "random",
+    "re",           "readline",    "reprlib",      "resource",
+    "rlcompleter",  "runpy",       "sched",        "secrets",
+    "select",       "selectors",   "shelve",       "shutil",
+    "signal",       "site",        "smtpd",        "smtplib",
+    "sndhdr",       "socket",      "socketserver", "spwd",
+    "sqlite3",      "sre",         "sre_compile",  "sre_constants",
+    "sre_parse",    "ssl",         "stat",         "statistics",
+    "string",       "stringprep",  "struct",       "subprocess",
+    "sunau",        "symtable",    "sys",          "sysconfig",
+    "syslog",       "tabnanny",    "tarfile",      "telnetlib",
+    "tempfile",     "termios",     "test",         "textwrap",
+    "threading",    "time",        "timeit",       "tkinter",
+    "token",        "tokenize",    "tomllib",      "trace",
+    "traceback",    "tracemalloc", "tty",          "turtle",
+    "turtledemo",   "types",       "typing",       "unicodedata",
+    "unittest",     "uu",          "uuid",         "venv",
+    "warnings",     "wave",        "weakref",      "webbrowser",
+    "winreg",       "winsound",    "wsgiref",      "xdrlib",
+    "xml",          "xmlrpc",      "zipapp",       "zipfile",
+    "zipimport",    "zlib",        "zoneinfo",
 };
+static const size_t static_stdlib_denylist_count = sizeof(static_stdlib_denylist) / sizeof(static_stdlib_denylist[0]);
 
 /* --- Helper function: str_in_list ---
    Returns 1 (true) if string is in a list of chars.
@@ -398,7 +233,7 @@ static int
 str_in_list(const char* needle, const char** list, size_t count)
 {
     for (size_t i = 0; i < count; i++) {
-        if (strcmp(needle, list[i]) == 0) {
+        if (strncmp(needle, list[i], strlen(list[i])) == 0) {
             return 1;
         }
     }
@@ -511,7 +346,7 @@ is_first_party(const char* module_name)
 
     // If the first part is found in the cached packages, it's not a first-party module.
     for (size_t i = 0; i < cached_packages_count; i++) {
-        if (cached_packages[i] && strcmp(first_part, cached_packages[i]) == 0) {
+        if (cached_packages[i] && strncmp(first_part, cached_packages[i], strlen(cached_packages[i])) == 0) {
             return 0;
         }
     }
@@ -613,7 +448,7 @@ init_globals(void)
     }
 
     builtin_count = (size_t)PyTuple_Size(builtin_names);
-    builtins_denylist_count = static_stdlib_count + builtin_count;
+    builtins_denylist_count = static_stdlib_denylist_count + builtin_count;
 
     builtins_denylist = malloc(builtins_denylist_count * sizeof(char*));
     if (!builtins_denylist) {
@@ -621,7 +456,7 @@ init_globals(void)
         return -1;
     }
     /* Copy static stdlib names */
-    for (i = 0; i < static_stdlib_count; i++) {
+    for (i = 0; i < static_stdlib_denylist_count; i++) {
         char* dup = strdup(static_stdlib_denylist[i]);
         if (!dup)
             return -1;
@@ -643,7 +478,7 @@ init_globals(void)
                 for (char* p = dup; *p; p++) {
                     *p = tolower(*p);
                 }
-                builtins_denylist[static_stdlib_count + i] = dup;
+                builtins_denylist[static_stdlib_denylist_count + i] = dup;
             }
         }
     }
@@ -723,7 +558,7 @@ py_should_iast_patch(PyObject* self, PyObject* args)
         if (str_in_list(lower_module, static_denylist, static_denylist_count)) {
             return PyLong_FromLong(DENIED_STATIC_DENYLIST);
         }
-        return PyLong_FromLong(ALLOWED_USER_ALLOWLIST);
+        return PyLong_FromLong(ALLOWED_STATIC_ALLOWLIST);
     }
     return PyLong_FromLong(DENIED_NOT_FOUND);
 }
@@ -753,7 +588,6 @@ build_list_from_env(const char* env_var_name)
         free_list(result_list, count);
         return -1;
     }
-
 
     return 0;
 }
