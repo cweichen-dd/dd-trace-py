@@ -306,7 +306,7 @@ def test_structured_prompt_data_v2(llmobs, llmobs_backend):
         )
     events = llmobs_backend.wait_for_num_events(num=1)
     assert len(events) == 1
-    assert events[0]["spans"][0]["meta"]["input"]["prompts"] == {
+    assert events[0]["spans"][0]["meta"]["input"]["prompt"] == {
         "id": "test",
         "instance_id": mock.ANY,
         "name": "test",
