@@ -1,5 +1,5 @@
-from hashlib import sha256
 from dataclasses import dataclass
+from hashlib import sha256
 import json
 from re import compile
 from typing import Any
