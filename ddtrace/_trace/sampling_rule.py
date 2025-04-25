@@ -4,14 +4,15 @@ from typing import Optional
 from typing import Tuple
 
 from ddtrace._trace.span import Span
-from ddtrace.internal.constants import MAX_UINT_64BITS as _MAX_UINT_64BITS
+from ddtrace.internal.constants import MAX_UINT_64BITS
+from ddtrace.internal.constants import SAMPLING_HASH_MODULO
+from ddtrace.internal.constants import SAMPLING_KNUTH_FACTOR
 from ddtrace.internal.glob_matching import GlobMatcher
 from ddtrace.internal.logger import get_logger
 from ddtrace.internal.utils.cache import cachedmethod
 
 
 log = get_logger(__name__)
-KNUTH_FACTOR = 1111111111111111111
 
 
 class SamplingRule(object):
@@ -79,7 +80,7 @@ class SamplingRule(object):
     @sample_rate.setter
     def sample_rate(self, sample_rate: float) -> None:
         self._sample_rate = sample_rate
-        self._sampling_id_threshold = sample_rate * _MAX_UINT_64BITS
+        self._sampling_id_threshold = sample_rate * MAX_UINT_64BITS
 
     def _pattern_matches(self, prop, pattern):
         # If the rule is not set, then assume it matches
@@ -187,7 +188,7 @@ class SamplingRule(object):
         elif self.sample_rate == 0:
             return False
 
-        return ((span._trace_id_64bits * KNUTH_FACTOR) % _MAX_UINT_64BITS) <= self._sampling_id_threshold
+        return ((span._trace_id_64bits * SAMPLING_KNUTH_FACTOR) % SAMPLING_HASH_MODULO) <= self._sampling_id_threshold
 
     def _no_rule_or_self(self, val):
         if val is self.NO_RULE:

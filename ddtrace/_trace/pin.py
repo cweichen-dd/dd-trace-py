@@ -89,8 +89,14 @@ class Pin(object):
     @staticmethod
     def get_from(obj: Any) -> Optional["Pin"]:
         """Return the pin associated with the given object. If a pin is attached to
-        the object, it will be returned. Otherwise, if a pin is attached to the
-        object's type, it will be returned. Otherwise, None is returned.
+        `obj` but the instance is not the owner of the pin, a new pin is cloned and
+        attached. This ensures that a pin inherited from a class is a copy for the new
+        instance, avoiding that a specific instance overrides other pins values.
+            >>> pin = Pin.get_from(conn)
+        :param obj: The object to look for a :class:`ddtrace.trace.Pin` on
+        :type obj: object
+        :rtype: :class:`ddtrace.trace.Pin`, None
+        :returns: :class:`ddtrace.trace.Pin` associated with the object, or None if none was found
         """
         if hasattr(obj, "__getddpin__"):
             return obj.__getddpin__()
@@ -102,7 +108,6 @@ class Pin(object):
             pin = pin.clone()
             pin.onto(obj)
         return pin
-
 
     @staticmethod
     def _get_config(obj: Any) -> Dict[str, Any]:
