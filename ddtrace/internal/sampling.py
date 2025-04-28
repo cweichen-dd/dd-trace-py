@@ -240,7 +240,6 @@ def is_single_span_sampled(span):
 
 
 def _set_sampling_tags(span: Span, sampled: bool, sample_rate: float, mechanism: int) -> None:
-    # type: (Span, bool, float, int) -> None
     # Set the sampling mechanism once but never overwrite an existing tag
     if not span.context._meta.get(SAMPLING_DECISION_TRACE_TAG_KEY):
         span._set_sampling_decision_maker(mechanism)
