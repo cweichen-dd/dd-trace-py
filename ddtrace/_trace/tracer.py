@@ -278,6 +278,7 @@ class Tracer(object):
         atexit.register(self._atexit)
         forksafe.register_before_fork(self._sample_before_fork)
         forksafe.register(self._child_after_fork)
+        forksafe.register_after_parent(self._parent_after_fork)
 
         self._shutdown_lock = RLock()
 
@@ -325,9 +326,10 @@ class Tracer(object):
         return func
 
     def _sample_before_fork(self) -> None:
-        span = self.current_root_span()
         if isinstance(self._writer, NativeWriter):
-            self._writer._exporter.drop()
+            self._writer._exporter.stop_worker()
+            self._writer._native_worker.join()
+        span = self.current_root_span()
         if span is not None and span.context.sampling_priority is None:
             self.sample(span)
 
@@ -493,6 +495,11 @@ class Tracer(object):
         self._pid = getpid()
         self._recreate()
         self._new_process = True
+
+    def _parent_after_fork(self):
+        if isinstance(self._writer, NativeWriter):
+            pass
+            # self._writer.start_worker_thread()
 
     def _recreate(self):
         """Re-initialize the tracer's processors and trace writer. This method should only be used in tests."""
@@ -950,6 +957,7 @@ class Tracer(object):
 
             atexit.unregister(self._atexit)
             forksafe.unregister(self._child_after_fork)
+            forksafe.unregister(self._parent_after_fork)
             forksafe.unregister_before_fork(self._sample_before_fork)
 
         self.start_span = self._start_span_after_shutdown  # type: ignore[assignment]
