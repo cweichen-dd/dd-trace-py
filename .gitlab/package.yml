@@ -212,7 +212,8 @@ variables:
       uv python list
   script:
     - |
-      for PYTHON_VERSION in ( "3.8" "3.9" "3.10" "3.11" "3.12" "3.13" );
+      python_versions=( "3.8" "3.9" "3.10" "3.11" "3.12" "3.13" )
+      for PYTHON_VERSION in "${python_versions[@]}";
       do
         echo -e "\e[0Ksection_start:`date +%s`:build_wheel_${PYTHON_VERSION}[collapsed=true]\r\e[0KBuild ddtrace wheel ${PYTHON_VERSION}"
         $(uv python find "${PYTHON_VERSION}") -m pip wheel "${CI_PROJECT_DIR}" --no-deps --wheel-dir wheelhouse/
