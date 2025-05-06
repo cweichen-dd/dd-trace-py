@@ -151,6 +151,7 @@ variables:
 
 "build ddtrace linux i686":
   extends: .build_ddtrace_base
+  image: registry.ddbuild.io/images/mirror/docker:27.1.1-dind
   tags: [ "docker-in-docker:amd64" ]
   parallel:
     matrix:
