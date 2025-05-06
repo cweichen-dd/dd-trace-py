@@ -2,6 +2,10 @@ variables:
   PYPA_IMAGE_BASE: registry.ddbuild.io/images/mirror/pypa
   PYPA_IMAGE_TAG: 2025-04-12-5990e2d
   PYPA_DEFAULT_IMAGE: "${PYPA_IMAGE_BASE}/manylinux2014_x86_64:${PYPA_IMAGE_TAG}"
+  PIP_PKG_VERSION: 25.0.1
+  TWINE_PKG_VERSION: 6.1.0
+  BUILD_PKG_VERSION: 1.2.2
+  PACKAGING_PKG_VERSION: 24.2
 
 .python_tags: &python_tags
   - "cp38-cp38"
@@ -45,7 +49,7 @@ variables:
       mkdir -p "${PIP_CACHE_DIR}"
       chown -R "$(id -u):$(id -g)" "${PIP_CACHE_DIR}"
       manylinux-interpreters ensure "${PYTHON_TAG}"
-      /opt/python/${PYTHON_TAG}/bin/python -m pip install -U pip==25.0.1 twine==6.1.0 build==1.2.2 packaging==24.2
+      /opt/python/${PYTHON_TAG}/bin/python -m pip install -U pip==${PIP_PKG_VERSION} twine==${TWINE_PKG_VERSION} build==${BUILD_PKG_VERSION} packaging==${PACKAGING_PKG_VERSION}
       /opt/python/${PYTHON_TAG}/bin/python --version
       /opt/python/${PYTHON_TAG}/bin/python -m pip --version
       /opt/python/${PYTHON_TAG}/bin/python -m pip cache info
@@ -213,6 +217,7 @@ variables:
       for PYTHON_VERSION in "${python_versions[@]}";
       do
         echo -e "\e[0Ksection_start:`date +%s`:build_wheel_${PYTHON_VERSION}[collapsed=true]\r\e[0KBuild ddtrace wheel ${PYTHON_VERSION}"
+        $(uv python find "${PYTHON_VERSION}") -m pip install -U pip==${PIP_PKG_VERSION} twine==${TWINE_PKG_VERSION} build==${BUILD_PKG_VERSION} packaging==${PACKAGING_PKG_VERSION}
         $(uv python find "${PYTHON_VERSION}") -m pip wheel "${CI_PROJECT_DIR}" --no-deps --wheel-dir wheelhouse/
         $(uv python find "${PYTHON_VERSION}") -m twine check --strict wheelhouse/*
         echo -e "\e[0Ksection_end:`date +%s`:build_wheel_${PYTHON_VERSION}\r\e[0K"
