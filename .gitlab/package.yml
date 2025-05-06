@@ -1,6 +1,3 @@
-include:
-  - .gitlab/testrunner.yml
-
 variables:
   PYPA_IMAGE_BASE: registry.ddbuild.io/images/mirror/pypa
   PYPA_IMAGE_TAG: 2025-04-12-5990e2d
@@ -154,7 +151,7 @@ variables:
 
 "build ddtrace linux i686":
   extends: .build_ddtrace_base
-  image: !reference [ .testrunner, image ]
+  image: "registry.ddbuild.io/docker:27.3.1"
   tags: [ "docker-in-docker:amd64" ]
   parallel:
     matrix:
@@ -165,13 +162,11 @@ variables:
     IMAGE: "ghcr.io/datadog/dd-trace-py/pypa_${PLATFORM}_${ARCH}:latest"
   script:
     - |
-      # Install docker-client
-      echo -e "\e[0Ksection_start:`date +%s`:install_docker[collapsed=true]\r\e[0KInstall docker-client"
-      apt-get update && apt-get install -y --no-install-recommends docker.io
+      echo -e "\e[0Ksection_start:`date +%s`:docker_info[collapsed=true]\r\e[0KDocker info"
       docker version
       docker buildx inspect --bootstrap
       docker buildx ls --no-trunc
-      echo -e "\e[0Ksection_end:`date +%s`:install_docker\r\e[0K"
+      echo -e "\e[0Ksection_end:`date +%s`:docker_info\r\e[0K"
     - |
       # Build the wheel
       echo -e "\e[0Ksection_start:`date +%s`:build_wheel[collapsed=true]\r\e[0KBuild ddtrace wheel"
