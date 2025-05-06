@@ -207,7 +207,7 @@ variables:
     - !reference [ .setup_rust ]
     - |
       pip install uv
-      uv python install "3.8" "3.9" "3.10" "3.11" "3.12" "3.13"
+      uv python install "3.8" "3.9" "3.10" "3.11" "3.12" "3.13" --default --preview
       export PATH="${HOME}/.uv/bin:${PATH}"
   script:
     - ls -la "${HOME}/.uv/bin/"
