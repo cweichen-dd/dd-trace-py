@@ -11,9 +11,21 @@ variables:
   - "cp312-cp312"
   - "cp313-cp313"
 
+.python_versions: &python_versions
+  - "3.8"
+  - "3.9"
+  - "3.10"
+  - "3.11"
+  - "3.12"
+  - "3.13"
+
 .linux_platforms: &linux_platforms
   - "manylinux2014"
   - "musllinux_1_2"
+
+.macos_platforms: &macos_platforms
+  - "arm64"
+  - "x86_64"
 
 .setup_rust:
   - |
@@ -46,13 +58,7 @@ variables:
 
 .build_ddtrace_base:
   stage: package
-  image: ${PYPA_DEFAULT_IMAGE}
-  tags: [ "arch:amd64" ]
-  timeout: 10m
   variables:
-    KUBERNETES_CPU_REQUEST: 6
-    KUBERNETES_MEMORY_REQUEST: 4Gi
-    KUBERNETES_MEMORY_LIMIT: 8Gi
     CMAKE_BUILD_PARALLEL_LEVEL: 12
     CARGO_BUILD_JOBS: 12
     SYSTEM_VERSION_COMPAT: 0
@@ -69,6 +75,16 @@ variables:
     - key: v0-${CI_JOB_NAME_SLUG}-build
       paths:
         - src/native/target/
+
+.build_ddtrace_linux_base:
+  extends: .build_ddtrace_base
+  image: ${PYPA_DEFAULT_IMAGE}
+  tags: [ "arch:amd64" ]
+  timeout: 10m
+  variables:
+    KUBERNETES_CPU_REQUEST: 6
+    KUBERNETES_MEMORY_REQUEST: 4Gi
+    KUBERNETES_MEMORY_LIMIT: 8Gi
 
 "build ddtrace sdist":
   stage: package
@@ -93,7 +109,7 @@ variables:
       - wheelhouse/
 
 "build ddtrace linux x86_64":
-  extends: .build_ddtrace_base
+  extends: .build_ddtrace_linux_base
   image: "${PYPA_IMAGE_BASE}/${PLATFORM}_${ARCH}:${PYPA_IMAGE_TAG}"
   tags: [ "arch:amd64" ]
   parallel:
@@ -150,7 +166,7 @@ variables:
     ARCH: "aarch64"
 
 "build ddtrace linux i686":
-  extends: .build_ddtrace_base
+  extends: .build_ddtrace_linux_base
   image: "registry.ddbuild.io/docker:27.3.1"
   tags: [ "docker-in-docker:amd64" ]
   parallel:
@@ -185,3 +201,26 @@ variables:
     name: wheelhouse-${PYTHON_TAG}-${PLATFORM}_${ARCH}
     paths:
       - wheelhouse/
+
+"build ddtrace macos":
+  extends: .build_ddtrace_base
+  tags: [ "macos:sonoma" ]
+  parallel:
+    matrix:
+      - PYTHON_VERSION: *python_versions
+        PLATFORM: *macos_platforms
+  variables:
+    UV_CACHE_DIR: "${CI_PROJECT_DIR}/.cache/uv"
+  before_script:
+    - !reference [ .setup_rust ]
+    - |
+      pip install uv
+      uv tool update-shell
+      uv python install "${PYTHON_VERSION}" --default
+      python --version
+  script:
+    - python --version
+  cache:
+    key: v0-${CI_JOB_NAME_SLUG}-cache
+    paths:
+      - .cache/
