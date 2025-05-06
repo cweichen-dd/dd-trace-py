@@ -203,19 +203,34 @@ variables:
   tags: [ "macos:sonoma-amd64" ]
   variables:
     UV_CACHE_DIR: "${CI_PROJECT_DIR}/.cache/uv"
+    ARCH: "x86_64"
   before_script:
     - !reference [ .setup_rust ]
     - |
       pip install uv
-      uv python install "3.8" "3.9" "3.10" "3.11" "3.12" "3.13" --default --preview
-      export PATH="${HOME}/.uv/bin:${PATH}"
+      uv python install "3.8" "3.9" "3.10" "3.11" "3.12" "3.13"
+      uv python list
   script:
-    - ls -la "${HOME}/.uv/bin/"
+    - |
+      for PYTHON_VERSION in ( "3.8" "3.9" "3.10" "3.11" "3.12" "3.13" );
+      do
+        echo -e "\e[0Ksection_start:`date +%s`:build_wheel_${PYTHON_VERSION}[collapsed=true]\r\e[0KBuild ddtrace wheel ${PYTHON_VERSION}"
+        $(uv python find "${PYTHON_VERSION}") -m pip wheel "${CI_PROJECT_DIR}" --no-deps --wheel-dir wheelhouse/
+        $(uv python find "${PYTHON_VERSION}") -m twine check --strict wheelhouse/*
+        echo -e "\e[0Ksection_end:`date +%s`:build_wheel_${PYTHON_VERSION}\r\e[0K"
+      done
+    - |
+      #Repair the wheel
+      echo -e "\e[0Ksection_start:`date +%s`:repair_wheel[collapsed=true]\r\e[0KRepair ddtrace wheel"
+      ./.gitlab/repair_wheel_macos.sh "wheelhouse/" "${ARCH}"
+      echo -e "\e[0Ksection_end:`date +%s`:repair_wheel\r\e[0K"
   cache:
     key: v0-${CI_JOB_NAME_SLUG}-cache
     paths:
       - .cache/
 
-"build ddtrace macos aarch64":
+"build ddtrace macos arm64":
   extends: "build ddtrace macos x86_64"
   tags: [ "macos:sonoma" ]
+  variables:
+    ARCH: "arm64"
