@@ -3,7 +3,7 @@ import pytest
 
 from ddtrace.ext import SpanTypes
 from ddtrace.llmobs import _constants as const
-from ddtrace.llmobs._constants import PARENT_ID_KEY
+from ddtrace.llmobs._constants import PARENT_ID_KEY, INPUT_PROMPT
 from ddtrace.llmobs._constants import ROOT_PARENT_ID
 from ddtrace.llmobs._utils import _get_session_id
 from ddtrace.llmobs.utils import Prompt
@@ -306,16 +306,18 @@ def test_structured_prompt_data_v2(llmobs, llmobs_backend):
         )
     events = llmobs_backend.wait_for_num_events(num=1)
     assert len(events) == 1
-    assert events[0]["spans"][0]["meta"]["input"]["prompt"] == {
-        "id": "test",
-        "instance_id": mock.ANY,
-        "name": "test",
-        "version": "1.0.0",
-        "chat_template": [{"role": "user", "content": "test {{value}}"}],
-        "template": "test {{value}}",
-        "variables": {"value": "test"},
-        "_dd_context_variable_keys": ["context"],
-        "_dd_query_variable_keys": ["question"],
+    assert events[0][0]["spans"][0]["meta"]["input"] == {
+        "prompt": {
+            "id": "test",
+            "instance_id": mock.ANY,
+            "name": "test",
+            "version": "1.0.0",
+            "chat_template": [{"role": "user", "content": "test {{value}}"}],
+            "template": "test {{value}}",
+            "variables": {"value": "test"},
+            "_dd_context_variable_keys": ["context"],
+            "_dd_query_variable_keys": ["question"],
+        }
     }
 
 
