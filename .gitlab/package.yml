@@ -161,6 +161,12 @@ variables:
     IMAGE: "ghcr.io/datadog/dd-trace-py/pypa_${PLATFORM}_${ARCH}:latest"
   script:
     - |
+      # Install docker-client
+      echo -e "\e[0Ksection_start:`date +%s`:install_docker[collapsed=true]\r\e[0KInstall docker-client"
+      yum install -y docker-client
+      docker --version
+      echo -e "\e[0Ksection_end:`date +%s`:install_docker\r\e[0K"
+    - |
       # Build the wheel
       echo -e "\e[0Ksection_start:`date +%s`:build_wheel[collapsed=true]\r\e[0KBuild ddtrace wheel"
       docker run --rm --platform "linux/386" -v "$(pwd):/project" -w "/project" "${IMAGE}" /bin/bash -c " \
