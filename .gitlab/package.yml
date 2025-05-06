@@ -186,8 +186,7 @@ variables:
     - |
       # Build the wheel
       echo -e "\e[0Ksection_start:`date +%s`:build_wheel[collapsed=true]\r\e[0KBuild ddtrace wheel"
-      docker run --rm --platform="linux/386" -v "$(pwd):/project" -w "/project" "${IMAGE}" bash -c "/opt/python/${PYTHON_TAG}/bin/python -m pip wheel ${CI_PROJECT_DIR} --no-deps --wheel-dir wheelhouse/"
-      docker run --rm --platform="linux/386" -v "$(pwd):/project" -w "/project" --entrypoint ${IMAGE}" bash -c "/opt/python/${PYTHON_TAG}/bin/python -m twine check --strict wheelhouse/*"
+      docker run --rm --platform="linux/386" -v "$(pwd):/project" -w "/project" "${IMAGE}" bash -c ".gitlab/build_linux_i686.sh /opt/python/${PYTHON_TAG}/bin/python wheelhouse/"
       echo -e "\e[0Ksection_end:`date +%s`:build_wheel\r\e[0K"
     - |
       #Repair the wheel
