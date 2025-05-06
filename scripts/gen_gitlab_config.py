@@ -205,6 +205,11 @@ def gen_pre_checks() -> None:
         command="hatch run lint:suitespec-check",
         paths={"*"},
     )
+    check(
+        name="Check for usages of getLogger",
+        command="! git --no-pager grep --heading --break --line-number 'getLogger' -- ddtrace/ ':!ddtrace/internal/logger.py' || true",  # noqa
+        paths={"ddtrace/*"},
+    )
     if not checks:
         return
 
