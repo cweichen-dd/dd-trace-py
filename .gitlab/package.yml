@@ -1,3 +1,6 @@
+include:
+  - .gitlab/testrunner.yml
+
 variables:
   PYPA_IMAGE_BASE: registry.ddbuild.io/images/mirror/pypa
   PYPA_IMAGE_TAG: 2025-04-12-5990e2d
@@ -151,7 +154,7 @@ variables:
 
 "build ddtrace linux i686":
   extends: .build_ddtrace_base
-  image: registry.ddbuild.io/images/mirror/docker:27.1.1-dind
+  image: !reference [ .testrunner, image ]
   tags: [ "docker-in-docker:amd64" ]
   parallel:
     matrix:
@@ -164,7 +167,7 @@ variables:
     - |
       # Install docker-client
       echo -e "\e[0Ksection_start:`date +%s`:install_docker[collapsed=true]\r\e[0KInstall docker-client"
-      yum install -y docker-client
+      apt-get update && apt-get install -y --no-install-recommends docker.io
       docker --version
       echo -e "\e[0Ksection_end:`date +%s`:install_docker\r\e[0K"
     - |
