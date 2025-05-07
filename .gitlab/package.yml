@@ -51,7 +51,7 @@ variables:
       # Setup python
       echo -e "\e[0Ksection_start:`date +%s`:setup_python[collapsed=true]\r\e[0KSetup python"
       manylinux-interpreters ensure "${PYTHON_TAG}"
-      /opt/python/${PYTHON_TAG}/bin/python -m pip install -U -r .gitlab/linux-build.requirements.txt
+      /opt/python/${PYTHON_TAG}/bin/python -m pip install -U -r ".gitlab/package/requirements-${PYTHON_TAG}.txt"
       /opt/python/${PYTHON_TAG}/bin/python --version
       /opt/python/${PYTHON_TAG}/bin/python -m pip --version
       /opt/python/${PYTHON_TAG}/bin/python -m pip cache info
@@ -127,12 +127,12 @@ variables:
       echo -e "\e[0Ksection_start:`date +%s`:build_wheel[collapsed=true]\r\e[0KBuild ddtrace wheel"
       echo "pip debug log: ${PIP_LOG}"
       echo "------ DDTRACE STARTING PIP WHEEL BUILD ------" >> "${PIP_LOG}"
-      ./.gitlab/build_wheel_linux.sh /opt/python/${PYTHON_TAG}/bin/python wheelhouse/
+      ./.gitlab/package/build_wheel_linux.sh /opt/python/${PYTHON_TAG}/bin/python wheelhouse/
       echo -e "\e[0Ksection_end:`date +%s`:build_wheel\r\e[0K"
     - |
       #Repair the wheel
       echo -e "\e[0Ksection_start:`date +%s`:repair_wheel[collapsed=true]\r\e[0KRepair ddtrace wheel"
-      ./.gitlab/repair_wheel_linux.sh wheelhouse/
+      ./.gitlab/package/repair_wheel_linux.sh wheelhouse/
       echo -e "\e[0Ksection_end:`date +%s`:repair_wheel\r\e[0K"
     - |
       # Download wheel dependencies (x86_64 and aarch64)
@@ -189,12 +189,12 @@ variables:
     - |
       # Build the wheel
       echo -e "\e[0Ksection_start:`date +%s`:build_wheel[collapsed=true]\r\e[0KBuild ddtrace wheel"
-      docker run --rm -v "$(pwd):/project" -w "/project" "${IMAGE}" bash -c ".gitlab/build_wheel_linux.sh /opt/python/${PYTHON_TAG}/bin/python wheelhouse/"
+      docker run --rm -v "$(pwd):/project" -w "/project" -e "PYTHON_TAG=${PYTHON_TAG}" "${IMAGE}" bash -c ".gitlab/package/build_wheel_linux.sh /opt/python/${PYTHON_TAG}/bin/python wheelhouse/"
       echo -e "\e[0Ksection_end:`date +%s`:build_wheel\r\e[0K"
     - |
       #Repair the wheel
       echo -e "\e[0Ksection_start:`date +%s`:repair_wheel[collapsed=true]\r\e[0KRepair ddtrace wheel"
-      docker run --rm -v "$(pwd):/project" -w "/project" --entrypoint ${IMAGE}" bash -c "./.gitlab/repair_wheel_linux.sh wheelhouse/"
+      docker run --rm -v "$(pwd):/project" -w "/project" -e "PYTHON_TAG=${PYTHON_TAG}" ${IMAGE}" bash -c "./.gitlab/package/repair_wheel_linux.sh wheelhouse/"
       echo -e "\e[0Ksection_end:`date +%s`:repair_wheel\r\e[0K"
   artifacts:
     name: wheelhouse-${PYTHON_TAG}-${PLATFORM}_${ARCH}
@@ -216,12 +216,14 @@ variables:
       uv python list
   script:
     - |
-      python_versions=( "3.8" "3.9" "3.10" "3.11" "3.12" "3.13" )
-      for PYTHON_VERSION in "${python_versions[@]}";
+      python_tags=( "cp38-cp38" "cp39-cp39" "cp310-cp310" "cp311-cp311" "cp312-cp312" "cp313-cp313" )
+      for PYTHON_TAG in "${python_tags[@]}";
       do
-        echo -e "\e[0Ksection_start:`date +%s`:build_wheel_${PYTHON_VERSION}[collapsed=true]\r\e[0KBuild ddtrace wheel ${PYTHON_VERSION}"
-        ./.gitlab/build_wheel_linux.sh $(uv python find "${PYTHON_VERSION}") "wheelhouse/"
-        echo -e "\e[0Ksection_end:`date +%s`:build_wheel_${PYTHON_VERSION}\r\e[0K"
+        # Convert "cp38-cp38" to "3.8"
+        PYTHON_VERSION=$(echo "${PYTHON_TAG:2:2}" | | sed 's/^./&./')
+        echo -e "\e[0Ksection_start:`date +%s`:build_wheel_${PYTHON_TAG}[collapsed=true]\r\e[0KBuild ddtrace wheel ${PYTHON_TAG}"
+        ./.gitlab/package/build_wheel_linux.sh $(uv python find "${PYTHON_VERSION}") "wheelhouse/"
+        echo -e "\e[0Ksection_end:`date +%s`:build_wheel_${PYTHON_TAG}\r\e[0K"
       done
     - |
       #Repair the wheel
