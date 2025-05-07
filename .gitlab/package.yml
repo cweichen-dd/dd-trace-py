@@ -102,8 +102,9 @@ variables:
   tags: [ "arch:amd64" ]
   variables:
     PYTHON_TAG: cp313-cp313
+  before_script:
+    - !reference [ .build_ddtrace_linux_base, before_script ]
   script:
-    - !reference [ .setup_manylinux_python ]
     - /opt/python/${PYTHON_TAG}/bin/python -m build . --sdist --outdir wheelhouse/
     - /opt/python/${PYTHON_TAG}/bin/python -m twine check --strict wheelhouse/*
   artifacts:
