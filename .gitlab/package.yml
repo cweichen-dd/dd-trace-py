@@ -221,7 +221,7 @@ variables:
       for PYTHON_TAG in "${python_tags[@]}";
       do
         # Convert "cp38-cp38" to "3.8"
-        PYTHON_VERSION=$(echo "${PYTHON_TAG:2:2}" | | sed 's/^./&./')
+        PYTHON_VERSION=$(echo "${PYTHON_TAG:2:2}" | sed 's/^./&./')
         echo -e "\e[0Ksection_start:`date +%s`:build_wheel_${PYTHON_TAG}[collapsed=true]\r\e[0KBuild ddtrace wheel ${PYTHON_TAG}"
         ./.gitlab/package/build_wheel_linux.sh $(uv python find "${PYTHON_VERSION}") "wheelhouse/"
         echo -e "\e[0Ksection_end:`date +%s`:build_wheel_${PYTHON_TAG}\r\e[0K"
