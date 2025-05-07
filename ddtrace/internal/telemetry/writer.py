@@ -259,18 +259,7 @@ class TelemetryWriter(PeriodicService):
             Payload types accepted by telemetry/proxy v2: app-started, app-closing, app-integrations-change
         """
         if self.enable():
-            event = {
-                "tracer_time": int(time.time()),
-                "runtime_id": get_runtime_id(),
-                "api_version": "v2",
-                "seq_id": next(self._sequence),
-                "debug": self._debug,
-                "application": get_application(config.SERVICE, config.VERSION, config.ENV),
-                "host": get_host_info(),
-                "payload": payload,
-                "request_type": payload_type,
-            }
-            self._events_queue.append(event)
+            self._events_queue.append({"payload": payload, "request_type": payload_type})
 
     def add_integration(self, integration_name, patched, auto_patched=None, error_msg=None, version=""):
         # type: (str, bool, Optional[bool], Optional[str], Optional[str]) -> None
@@ -620,9 +609,18 @@ class TelemetryWriter(PeriodicService):
         # Send a heartbeat event to the agent, this is required to keep RC connections alive
         self._app_heartbeat_event()
 
-        telemetry_events = self._flush_events_queue()
-        for telemetry_event in telemetry_events:
-            self._client.send_event(telemetry_event)
+        batch_event = {
+            "tracer_time": int(time.time()),
+            "runtime_id": get_runtime_id(),
+            "api_version": "v2",
+            "seq_id": next(self._sequence),
+            "debug": self._debug,
+            "application": get_application(config.SERVICE, config.VERSION, config.ENV),
+            "host": get_host_info(),
+            "payload": self._flush_events_queue(),
+            "request_type": "message-batch",
+        }
+        self._client.send_event(batch_event)
 
     def app_shutdown(self):
         if self.started:
