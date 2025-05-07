@@ -38,12 +38,18 @@ variables:
     rustc --version
     echo -e "\e[0Ksection_end:`date +%s`:setup_rust\r\e[0K"
 
-.setup_python:
+.setup_pip_cache:
+  - |
+    # Setup pip cache
+    echo -e "\e[0Ksection_start:`date +%s`:setup_pip_cache[collapsed=true]\r\e[0KSetup pip cache"
+    mkdir -p "${PIP_CACHE_DIR}"
+    chown -R "$(id -u):$(id -g)" "${PIP_CACHE_DIR}"
+    echo -e "\e[0Ksection_end:`date +%s`:setup_pip_cache\r\e[0K"
+
+.setup_manylinux_python:
     - |
       # Setup python
       echo -e "\e[0Ksection_start:`date +%s`:setup_python[collapsed=true]\r\e[0KSetup python"
-      mkdir -p "${PIP_CACHE_DIR}"
-      chown -R "$(id -u):$(id -g)" "${PIP_CACHE_DIR}"
       manylinux-interpreters ensure "${PYTHON_TAG}"
       /opt/python/${PYTHON_TAG}/bin/python -m pip install -U -r .gitlab/linux-build.requirements.txt
       /opt/python/${PYTHON_TAG}/bin/python --version
@@ -64,13 +70,12 @@ variables:
     PIP_DISABLE_PIP_VERSION_CHECK: 1
     _DD_DEBUG_EXT: "1"
     _DD_DEBUG_EXT_LOG: "${CI_PROJECT_DIR}/wheelhouse-debug/${CI_JOB_NAME_SLUG}.debug_ext_metadata.log"
+  before_script:
+    - !reference [ .setup_pip_cache ]
   cache:
     - key: v0-${CI_JOB_NAME_SLUG}-cache
       paths:
         - .cache/
-    - key: v0-${CI_JOB_NAME_SLUG}-build
-      paths:
-        - src/native/target/
 
 .build_ddtrace_linux_base:
   extends: .build_ddtrace_base
@@ -81,22 +86,24 @@ variables:
     KUBERNETES_CPU_REQUEST: 6
     KUBERNETES_MEMORY_REQUEST: 4Gi
     KUBERNETES_MEMORY_LIMIT: 8Gi
+  before_script:
+    - !reference [ .build_ddtrace_base, before_script ]
+    - !reference [ .setup_rust ]
+    - !reference [ .setup_manylinux_python ]
+  cache:
+    - !reference [ .build_ddtrace_base, cache ]
+    - key: v0-${CI_JOB_NAME_SLUG}-build
+      paths:
+        - src/native/target/
 
 "build ddtrace sdist":
-  stage: package
+  extends: .build_ddtrace_base
   image: ${PYPA_DEFAULT_IMAGE}
   tags: [ "arch:amd64" ]
   variables:
     PYTHON_TAG: cp313-cp313
-    PIP_CACHE_DIR: ${CI_PROJECT_DIR}/.cache/pip
-    CARGO_HOME: ${CI_PROJECT_DIR}/.cache/cargo
-  cache:
-    key: v0-${CI_JOB_NAME_SLUG}-cache
-    paths:
-      - .cache/
   script:
-    - !reference [ .setup_rust ]
-    - !reference [ .setup_python ]
+    - !reference [ .setup_manylinux_python ]
     - /opt/python/${PYTHON_TAG}/bin/python -m build . --sdist --outdir wheelhouse/
     - /opt/python/${PYTHON_TAG}/bin/python -m twine check --strict wheelhouse/*
   artifacts:
@@ -114,8 +121,6 @@ variables:
         PYTHON_TAG: *python_tags
   variables:
     ARCH: "x86_64"
-  before_script:
-    - !reference [ .setup_rust ]
   script:
     - |
       # Build the wheel
@@ -170,22 +175,26 @@ variables:
   variables:
     ARCH: "i686"
     IMAGE: "ghcr.io/datadog/dd-trace-py/pypa_${PLATFORM}_${ARCH}:latest"
-  script:
+    DOCKER_DEFAULT_PLATFORM: "linux/386"
+  before_script:
+    # Do not inherit before_script from .build_ddtrace_linux_base
+    - !reference [ .setup_pip_cache ]
     - |
       echo -e "\e[0Ksection_start:`date +%s`:docker_info[collapsed=true]\r\e[0KDocker info"
       docker version
       docker buildx inspect --bootstrap
       docker buildx ls --no-trunc
       echo -e "\e[0Ksection_end:`date +%s`:docker_info\r\e[0K"
+  script:
     - |
       # Build the wheel
       echo -e "\e[0Ksection_start:`date +%s`:build_wheel[collapsed=true]\r\e[0KBuild ddtrace wheel"
-      docker run --rm --platform="linux/386" -v "$(pwd):/project" -w "/project" "${IMAGE}" bash -c ".gitlab/build_wheel_linux.sh /opt/python/${PYTHON_TAG}/bin/python wheelhouse/"
+      docker run --rm -v "$(pwd):/project" -w "/project" "${IMAGE}" bash -c ".gitlab/build_wheel_linux.sh /opt/python/${PYTHON_TAG}/bin/python wheelhouse/"
       echo -e "\e[0Ksection_end:`date +%s`:build_wheel\r\e[0K"
     - |
       #Repair the wheel
       echo -e "\e[0Ksection_start:`date +%s`:repair_wheel[collapsed=true]\r\e[0KRepair ddtrace wheel"
-      docker run --rm --platform="linux/386" -v "$(pwd):/project" -w "/project" --entrypoint ${IMAGE}" bash -c "./.gitlab/repair_wheel_linux.sh wheelhouse/"
+      docker run --rm -v "$(pwd):/project" -w "/project" --entrypoint ${IMAGE}" bash -c "./.gitlab/repair_wheel_linux.sh wheelhouse/"
       echo -e "\e[0Ksection_end:`date +%s`:repair_wheel\r\e[0K"
   artifacts:
     name: wheelhouse-${PYTHON_TAG}-${PLATFORM}_${ARCH}
@@ -199,6 +208,7 @@ variables:
     UV_CACHE_DIR: "${CI_PROJECT_DIR}/.cache/uv"
     ARCH: "x86_64"
   before_script:
+    - !reference [ .setup_pip_cache ]
     - !reference [ .setup_rust ]
     - |
       pip install "uv==0.7.2"
