@@ -208,7 +208,7 @@ variables:
   variables:
     UV_CACHE_DIR: "${CI_PROJECT_DIR}/.cache/uv"
     ARCH: "x86_64"
-    PIP_INSTALL_BREAK_SYSTEM_PACKAGES: 1
+    PIP_BREAK_SYSTEM_PACKAGES: 1
   before_script:
     - !reference [ .setup_pip_cache ]
     - !reference [ .setup_rust ]
