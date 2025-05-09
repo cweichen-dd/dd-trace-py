@@ -368,10 +368,12 @@ class TelemetryWriter(PeriodicService):
     def _app_integrations_changed_event(self, integrations):
         # type: (List[Dict]) -> Dict
         """Adds a Telemetry event which sends a list of configured integrations to the agent"""
-        payload = {
-            "integrations": integrations,
+        return {
+            "payload": {
+                "integrations": integrations,
+            },
+            "request_type": "app-integrations-change",
         }
-        return {"payload": payload, "request_type": "app-integrations-change"}
 
     def _flush_integrations_queue(self):
         # type: () -> List[Dict]
@@ -392,10 +394,12 @@ class TelemetryWriter(PeriodicService):
     def _app_client_configuration_changed_event(self, configurations):
         # type: (List[Dict]) -> Dict[str, Any]
         """Adds a Telemetry event which sends list of modified configurations to the agent"""
-        payload = {
-            "configuration": configurations,
+        return {
+            "payload": {
+                "configuration": configurations,
+            },
+            "request_type": "app-client-configuration-change",
         }
-        return {"payload": payload, "request_type": "app-client-configuration-change"}
 
     def _app_dependencies_loaded_event(self):
         # type: () -> Optional[Dict[str, Any]]
@@ -420,14 +424,16 @@ class TelemetryWriter(PeriodicService):
         if not self._send_product_change_updates:
             return None
 
-        payload = {
-            "products": {
-                product: {"version": tracer_version, "enabled": status}
-                for product, status in self._product_enablement.items()
-            }
-        }
         self._send_product_change_updates = False
-        return {"payload": payload, "request_type": "app-product-change"}
+        return {
+            "payload": {
+                "products": {
+                    product: {"version": tracer_version, "enabled": status}
+                    for product, status in self._product_enablement.items()
+                }
+            },
+            "request_type": "app-product-change",
+        }
 
     def product_activated(self, product, enabled):
         # type: (str, bool) -> None
@@ -567,12 +573,14 @@ class TelemetryWriter(PeriodicService):
         for payload_type, namespaces in namespace_metrics.items():
             for namespace, metrics in namespaces.items():
                 if metrics:
-                    payload = {
-                        "namespace": namespace,
-                        "series": metrics,
-                    }
                     log.debug("%s request payload, namespace %s", payload_type, namespace)
-                    return {"payload": payload, "request_type": payload_type}
+                    return {
+                        "payload": {
+                            "namespace": namespace,
+                            "series": metrics,
+                        },
+                        "request_type": payload_type,
+                    }
         return None
 
     def _generate_logs_event(self, logs):
@@ -581,13 +589,36 @@ class TelemetryWriter(PeriodicService):
         return {"payload": {"logs": list(logs)}, "request_type": TELEMETRY_TYPE_LOGS}
 
     def periodic(self, force_flush=False, shutting_down=False):
-        # ensure app_started is called at least once in case traces weren't flushed
-        events = []
-        if app_started := self._app_started():
-            events.append(app_started)
-        if app_product_change := self._app_product_change():
-            events.append(app_product_change)
+        """Process and send telemetry events in batches.
 
+        This method handles the periodic collection and sending of telemetry data with two main timing intervals:
+        1. Metrics collection interval (10 seconds by default): Collects metrics and logs
+        2. Heartbeat interval (60 seconds by default): Sends all collected data to the telemetry endpoint
+
+        The method follows this flow:
+        1. Collects metrics and logs that have accumulated since last collection
+        2. If not at heartbeat interval and not force_flush:
+           - Queues the metrics and logs for future sending
+           - Returns early
+        3. At heartbeat interval or force_flush:
+           - Collects app status (started, product changes)
+           - Collects integration changes
+           - Collects configuration changes
+           - Collects dependency changes
+           - Collects stored events (ex: metrics and logs)
+           - Sends everything as a single batch
+
+        Args:
+            force_flush: If True, bypasses the heartbeat interval check and sends immediately
+            shutting_down: If True, includes app-closing event in the batch
+
+        Note:
+            - Metrics are collected every 10 seconds to ensure accurate time-based data
+            - All data is sent in a single batch every 60 seconds to minimize network overhead
+            - A heartbeat event is always included to keep RC connections alive
+        """
+        # Collect metrics and logs that have accumulated since last batch
+        events = []
         if namespace_metrics := self._namespace.flush(float(self.interval)):
             if metrics_event := self._generate_metrics_event(namespace_metrics):
                 events.append(metrics_event)
@@ -595,15 +626,21 @@ class TelemetryWriter(PeriodicService):
         if logs_metrics := self._flush_log_metrics():
             events.append(self._generate_logs_event(logs_metrics))
 
-        # Telemetry metrics and logs should be aggregated into payloads every time periodic is called.
-        # This ensures metrics and logs are submitted in 10 second time buckets.
+        # Queue metrics if not at heartbeat interval
         if self._is_periodic and force_flush is False:
             if self._periodic_count < self._periodic_threshold:
+                self._periodic_count += 1
                 if events:
                     self.add_events(events)
-                self._periodic_count += 1
                 return
             self._periodic_count = 0
+
+        # At heartbeat interval, collect and send all telemetry data
+        if app_started := self._app_started():
+            events.append(app_started)
+
+        if app_product_change := self._app_product_change():
+            events.append(app_product_change)
 
         if integrations := self._flush_integrations_queue():
             events.append(self._app_integrations_changed_event(integrations))
@@ -617,12 +654,14 @@ class TelemetryWriter(PeriodicService):
         if shutting_down and (app_closing := self._app_closing_event()):
             events.append(app_closing)
 
-        # Send a heartbeat event to the agent, this is required to keep RC connections alive
+        # Always include a heartbeat to keep RC connections alive
         events.append(self._app_heartbeat_event())
 
+        # Get any queued events and combine with current batch
         if queued_events := self._flush_events_queue():
             events.extend(queued_events)
 
+        # Prepare and send the final batch
         batch_event = {
             "tracer_time": int(time.time()),
             "runtime_id": get_runtime_id(),
