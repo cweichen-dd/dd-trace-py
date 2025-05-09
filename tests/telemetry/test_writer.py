@@ -88,7 +88,9 @@ def test_app_started_event(telemetry_writer, test_agent_session, mock_time):
     """asserts that app_started() queues a valid telemetry request which is then sent by periodic()"""
     with override_global_config(dict(_telemetry_dependency_collection=False)):
         # queue an app started event
-        telemetry_writer._app_started()
+        event = telemetry_writer._app_started()
+        assert event is not None, "app_started() did not return an event"
+        telemetry_writer.add_event(event["payload"], "app-started")
         # force a flush
         telemetry_writer.periodic(force_flush=True)
 
