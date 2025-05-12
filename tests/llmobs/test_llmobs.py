@@ -3,7 +3,7 @@ import pytest
 
 from ddtrace.ext import SpanTypes
 from ddtrace.llmobs import _constants as const
-from ddtrace.llmobs._constants import PARENT_ID_KEY, INPUT_PROMPT
+from ddtrace.llmobs._constants import PARENT_ID_KEY
 from ddtrace.llmobs._constants import ROOT_PARENT_ID
 from ddtrace.llmobs._utils import _get_session_id
 from ddtrace.llmobs.utils import Prompt
