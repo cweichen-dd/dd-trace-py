@@ -19,7 +19,7 @@ variables:
   timeout: 30m
   dependencies: [ "baseline:build", "candidate" ]
   before_script:
-    - mkdir $PIP_CACHE_DIR
+    - mkdir -p $PIP_CACHE_DIR
   script: |
     export REPORTS_DIR="$(pwd)/reports/" && (mkdir "${REPORTS_DIR}" || :)
 
