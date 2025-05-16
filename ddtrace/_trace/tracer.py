@@ -124,15 +124,6 @@ def _default_span_processors_factory(
 
         span_processors.append(AppSecIastSpanProcessor())
 
-    if config._trace_compute_stats:
-        # Inline the import to avoid pulling in ddsketch or protobuf
-        # when importing ddtrace.
-        from ddtrace.internal.processor.stats import SpanStatsProcessorV06
-
-        span_processors.append(
-            SpanStatsProcessorV06(),
-        )
-
     span_processors.append(profiling_span_processor)
 
     return span_processors, appsec_processor
