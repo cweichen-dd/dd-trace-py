@@ -21,6 +21,7 @@ variables:
   before_script:
     - mkdir -p $PIP_CACHE_DIR
   script: |
+    echo -e "\e[0Ksection_start:`date +%s`:setup[collapsed=true]\r\e[0KSetup benchmarking platform"
     export REPORTS_DIR="$(pwd)/reports/" && (mkdir "${REPORTS_DIR}" || :)
     export ARTIFACTS_DIR="$(pwd)/artifacts/" && (mkdir "${ARTIFACTS_DIR}" || :)
 
@@ -30,9 +31,13 @@ variables:
     fi
     git clone --branch "${BENCHMARKING_BRANCH}" https://github.com/DataDog/benchmarking-platform /platform
     export PATH="$PATH:/platform/steps"
+    echo -e "\e[0Ksection_end:`date +%s`:setup\r\e[0K"
 
+    echo -e "\e[0Ksection_start:`date +%s`:capture[collapsed=true]\r\e[0KCapture hardware and software info"
     capture-hardware-software-info.sh
+    echo -e "\e[0Ksection_end:`date +%s`:capture\r\e[0K"
 
+    echo -e "\e[0Ksection_start:`date +%s`:run_benchmarks[collapsed=true]\r\e[0KRun benchmarks"
     if [[ $SCENARIOS =~ flask_* || $SCENARIOS =~ django_* ]];
     then
       bp-runner "${CI_PROJECT_DIR:-.}/.gitlab/benchmarks/bp-runner.yml" --debug -t
@@ -40,10 +45,15 @@ variables:
       # Use all 24 cores available, assign 2 cores per test scenario
       run-benchmarks.py 24-47 2 "${SCENARIOS}"
     fi
+    echo -e "\e[0Ksection_end:`date +%s`:run_benchmarks\r\e[0K"
 
-    analyze-results.sh
+    echo -e "\e[0Ksection_start:`date +%s`:analyze_results[collapsed=true]\r\e[0KAnalyze results"
+    analyze-results.sh "${SCENARIOS}"
+    echo -e "\e[0Ksection_end:`date +%s`:analyze_results\r\e[0K"
 
+    echo -e "\e[0Ksection_start:`date +%s`:upload_results[collapsed=true]\r\e[0KUpload results"
     upload-results-to-s3.sh || :
+    echo -e "\e[0Ksection_end:`date +%s`:upload_results\r\e[0K"
   artifacts:
     name: "reports"
     when: always
@@ -164,7 +174,7 @@ microbenchmarks:
   allow_failure: true
   parallel:
     matrix:
-      - SCENARIO:
+      - SCENARIOS:
         # Flaky timeouts on starting up
         - "appsec_iast_django_startup"
 
