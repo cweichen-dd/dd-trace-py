@@ -35,7 +35,7 @@ variables:
 
     if [[ $SCENARIOS =~ flask_* || $SCENARIOS =~ django_* ]];
     then
-      BP_SCENARIO=$SCENARIOS bp-runner "${CI_PROJECT_DIR:-.}/.gitlab/benchmarks/bp-runner.yml" --debug -t
+      bp-runner "${CI_PROJECT_DIR:-.}/.gitlab/benchmarks/bp-runner.yml" --debug -t
     else
       # Use all 24 cores available, assign 2 cores per test scenario
       run-benchmarks.py 24-47 2 "${SCENARIOS}"
