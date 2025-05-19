@@ -53,3 +53,8 @@ class OtelSpan(bm.Scenario):
                         s.end()
 
         yield _
+
+        # Clean up any unfinished spans
+        if hasattr(tracer, "_span_aggregator"):
+            if hasattr(tracer._span_aggregator, "_traces"):
+                tracer._span_aggregator._traces.clear()
