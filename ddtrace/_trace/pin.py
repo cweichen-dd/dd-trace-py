@@ -92,7 +92,9 @@ class Pin(object):
         `obj` but the instance is not the owner of the pin, a new pin is cloned and
         attached. This ensures that a pin inherited from a class is a copy for the new
         instance, avoiding that a specific instance overrides other pins values.
+
             >>> pin = Pin.get_from(conn)
+
         :param obj: The object to look for a :class:`ddtrace.trace.Pin` on
         :type obj: object
         :rtype: :class:`ddtrace.trace.Pin`, None
