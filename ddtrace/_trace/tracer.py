@@ -419,16 +419,18 @@ class Tracer(object):
             try:
                 info = debug.collect(self)
             except Exception as e:
-                log.warning("- DATADOG TRACER DIAGNOSTIC - Failed to collect start-up logs: %s", e)
+                msg = "Failed to collect start-up logs: %s" % e
+                self._log_compat(logging.WARNING, "- DATADOG TRACER DIAGNOSTIC - %s" % msg)
             else:
                 if log.isEnabledFor(logging.INFO):
-                    log.info("- DATADOG TRACER CONFIGURATION - %s", info)
-
+                    msg = "- DATADOG TRACER CONFIGURATION - %s" % info
+                    self._log_compat(logging.INFO, msg)
                 # Always log errors since we're either in debug_mode or start up logs
                 # are enabled.
                 agent_error = info.get("agent_error")
                 if agent_error:
-                    log.warning("- DATADOG TRACER DIAGNOSTIC - %s", agent_error)
+                    msg = "- DATADOG TRACER DIAGNOSTIC - %s" % agent_error
+                    self._log_compat(logging.WARNING, msg)
 
     def _child_after_fork(self):
         self._pid = getpid()
@@ -656,6 +658,16 @@ class Tracer(object):
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug("finishing span %s (enabled:%s)", span._pprint(), self.enabled)
+
+    def _log_compat(self, level, msg):
+        """Logs a message for the given level.
+        Instead, something like this will be printed to stderr:
+            No handlers could be found for logger "ddtrace.tracer"
+        Since the global tracer is configured on import and it is recommended
+        to import the tracer as early as possible, it will likely be the case
+        that there are no handlers installed yet.
+        """
+        log.log(level, msg)
 
     def trace(
         self,
