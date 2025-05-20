@@ -425,6 +425,7 @@ class Tracer(object):
                 if log.isEnabledFor(logging.INFO):
                     msg = "- DATADOG TRACER CONFIGURATION - %s" % info
                     self._log_compat(logging.INFO, msg)
+
                 # Always log errors since we're either in debug_mode or start up logs
                 # are enabled.
                 agent_error = info.get("agent_error")
@@ -661,8 +662,10 @@ class Tracer(object):
 
     def _log_compat(self, level, msg):
         """Logs a message for the given level.
+
         Instead, something like this will be printed to stderr:
             No handlers could be found for logger "ddtrace.tracer"
+
         Since the global tracer is configured on import and it is recommended
         to import the tracer as early as possible, it will likely be the case
         that there are no handlers installed yet.
