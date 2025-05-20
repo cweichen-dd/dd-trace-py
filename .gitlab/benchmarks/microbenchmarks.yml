@@ -21,6 +21,11 @@ variables:
   before_script:
     - mkdir -p $PIP_CACHE_DIR
   script: |
+    if [[ -z "$FLAVOR" ]];
+    then
+      echo "No FLAVOR variable set."
+      exit 1
+    fi
     echo -e "\e[0Ksection_start:`date +%s`:setup[collapsed=true]\r\e[0KSetup benchmarking platform"
     export REPORTS_DIR="$(pwd)/reports/" && (mkdir "${REPORTS_DIR}" || :)
     export ARTIFACTS_DIR="$(pwd)/artifacts/" && (mkdir "${ARTIFACTS_DIR}" || :)
@@ -38,13 +43,7 @@ variables:
     echo -e "\e[0Ksection_end:`date +%s`:capture\r\e[0K"
 
     echo -e "\e[0Ksection_start:`date +%s`:run_benchmarks[collapsed=true]\r\e[0KRun benchmarks"
-    if [[ $SCENARIOS =~ flask_* || $SCENARIOS =~ django_* ]];
-    then
-      bp-runner "${CI_PROJECT_DIR:-.}/.gitlab/benchmarks/bp-runner.yml" --debug -t
-    else
-      # Use all 24 cores available, assign 2 cores per test scenario
-      run-benchmarks.py 24-47 2 "${SCENARIOS}"
-    fi
+    bp-runner "${CI_PROJECT_DIR:-.}/.gitlab/benchmarks/bp-runner.$FLAVOR.yml" --debug -t
     echo -e "\e[0Ksection_end:`date +%s`:run_benchmarks\r\e[0K"
 
     echo -e "\e[0Ksection_start:`date +%s`:analyze_results[collapsed=true]\r\e[0KAnalyze results"
@@ -155,16 +154,12 @@ microbenchmarks:
   extends: .benchmarks
   parallel:
     matrix:
-      - SCENARIOS:
-        - "span tracer sampling_rule_matches set_http_meta core_api otel_span rate_limiter telemetry_add_metric http_propagation_extract http_propagation_inject"
-        - "startup"
-        - "packages_package_for_root_module_mapping packages_update_imported_dependencies"
-        # Must be run individually since they require the agent
-        - "django_simple"
-        - "flask_simple"
-        - "flask_sqli"
-        - "errortracking_django_simple"
-        - "errortracking_flask_sqli"
+      - FLAVOR:
+        - "flask"
+        - "django"
+        - "packages"
+        - "tracer"
+        - "general"
         # Flaky timeouts on starting up
         # - "appsec_iast_django_startup"
         # Flaky. Timeout errors

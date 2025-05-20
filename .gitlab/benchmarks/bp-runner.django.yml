@@ -1,5 +1,5 @@
 experiments:
-  - name: run-microbenchmarks
+  - name: django-microbenchmarks
     setup:
       - name: datadog-agent
         run: datadog_agent
@@ -11,4 +11,4 @@ experiments:
         cpus: 26-47
         run: shell
         script: |
-          /platform/steps/run-benchmarks.py 26-47 2 "$SCENARIOS"
+          /platform/steps/run-benchmarks.py 26-47 2 "django_simple errortracking_django_sqli"

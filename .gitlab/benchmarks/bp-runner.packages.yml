@@ -1,0 +1,8 @@
+experiments:
+  - name: packages-microbenchmarks
+    steps:
+      - name: benchmarks
+        cpus: 24-47
+        run: shell
+        script: |
+          /platform/steps/run-benchmarks.py 24-47 2 "packages_package_for_root_module_mapping packages_update_imported_dependencies"

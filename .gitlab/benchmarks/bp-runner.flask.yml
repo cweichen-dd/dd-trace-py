@@ -1,0 +1,14 @@
+experiments:
+  - name: flask-microbenchmarks
+    setup:
+      - name: datadog-agent
+        run: datadog_agent
+        cpus: 24-25
+        config_sh: /platform/steps/update-dd-agent-config.sh
+
+    steps:
+      - name: benchmarks
+        cpus: 26-47
+        run: shell
+        script: |
+          /platform/steps/run-benchmarks.py 26-47 2 "flask_simple flask_sqli errortracking_flask_sqli"

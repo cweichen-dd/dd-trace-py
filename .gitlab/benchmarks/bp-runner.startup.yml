@@ -1,0 +1,8 @@
+experiments:
+  - name: general-microbenchmarks
+    steps:
+      - name: benchmarks
+        cpus: 24-47
+        run: shell
+        script: |
+          /platform/steps/run-benchmarks.py 24-47 2 "startup rate_limiter"
