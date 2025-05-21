@@ -637,7 +637,8 @@ class TelemetryWriter(PeriodicService):
 
         # At heartbeat interval, collect and send all telemetry data
         if app_started := self._app_started():
-            events.append(app_started)
+            # app-started should be the first event in the batch
+            events = [app_started] + events
 
         if app_product_change := self._app_product_change():
             events.append(app_product_change)
