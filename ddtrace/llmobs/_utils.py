@@ -72,9 +72,13 @@ def _validate_prompt(
     ctx_variable_keys = prompt.get("rag_context_variables")
     query_variable_keys = prompt.get("rag_query_variables")
 
-    # Stage 2: Strict validations
+    # Stage 2: Strict validation and sanity checks
     if strict_validation:
         _strict_validate_prompt(prompt)
+
+    # Ensure only one of `template` or `chat_template` is provided
+    if template and chat_template:
+        raise ValueError("Only one of 'template' or 'chat_template' can be provided, not both.")
 
     # Stage 3: Set defaults
     final_prompt_id = prompt_id or name or DEFAULT_PROMPT_NAME
