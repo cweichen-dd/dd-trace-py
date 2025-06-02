@@ -125,15 +125,11 @@ def collect(tracer):
         agent_error=agent_error,
         statsd_url=agent_config.dogstatsd_url,
         env=ddtrace.config.env or "",
-        is_global_tracer=tracer == ddtrace.tracer,
-        enabled_env_setting=os.getenv("DATADOG_TRACE_ENABLED"),
-        tracer_enabled=tracer.enabled,
-        sampler_type=type(tracer._sampler).__name__ if tracer._sampler else "N/A",
-        priority_sampler_type="N/A",
+        ddtrace_enabled=ddtrace.config._tracing_enabled,
         sampling_rules=sampling_rules,
         service=ddtrace.config.service or "",
         debug=ddtrace.config._debug_mode,
-        enabled_cli="ddtrace" in os.getenv("PYTHONPATH", ""),
+        auto_instrumented="ddtrace.bootstrap.sitecustomize" in sys.modules,
         analytics_enabled=ddtrace.config._analytics_enabled,
         log_injection_enabled=ddtrace.config._logs_injection,
         health_metrics_enabled=ddtrace.config._health_metrics_enabled,
@@ -191,7 +187,7 @@ def pretty_collect(tracer, color=True):
     DD Version: {dd_version}
     Global Tags: {global_tags}
     Tracer Tags: {tracer_tags}""".format(
-        tracer_enabled=info.get("tracer_enabled"),
+        tracer_enabled=info.get("ddtrace_enabled"),
         appsec_enabled=info.get("asm_enabled"),
         remote_config_enabled=info.get("remote_config_enabled"),
         iast_enabled=info.get("iast_enabled"),
