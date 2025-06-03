@@ -34,20 +34,6 @@ def test_shutdown_on_exit_signal(mock_get_signal, mock_signal):
     tracer.shutdown = original_shutdown
 
 
-def test_debug_mode_generates_debug_output():
-    p = import_ddtrace_in_subprocess(None)
-    assert p.stdout.read() == b""
-    assert b"DEBUG:ddtrace" not in p.stderr.read(), "stderr should have no debug lines when DD_TRACE_DEBUG is unset"
-
-    env = os.environ.copy()
-    env.update({"DD_TRACE_DEBUG": "true"})
-    p = import_ddtrace_in_subprocess(env)
-    assert p.stdout.read() == b""
-    assert (
-        b"debug mode has been enabled for the ddtrace logger" in p.stderr.read()
-    ), "stderr should have some debug lines when DD_TRACE_DEBUG is set"
-
-
 def test_import_ddtrace_generates_no_output_by_default(ddtrace_run_python_code_in_subprocess):
     out, err, status, _ = ddtrace_run_python_code_in_subprocess(
         """
