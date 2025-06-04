@@ -61,6 +61,7 @@ def _inner_model_fn(operation_kind, **llmobs_kwargs):
         model_provider = llmobs_kwargs.get("model_provider")
         session_id = llmobs_kwargs.get("session_id")
         ml_app = llmobs_kwargs.get("ml_app")
+        prompt = llmobs_kwargs.get("prompt") if operation_kind == "llm" else None
         if iscoroutinefunction(func) or isasyncgenfunction(func):
 
             @wraps(func)
@@ -70,14 +71,17 @@ def _inner_model_fn(operation_kind, **llmobs_kwargs):
                     return func(*args, **kwargs)
                 traced_model_name, span_name = _get_llmobs_span_options(name, model_name, func)
                 traced_operation = getattr(LLMObs, operation_kind, LLMObs.llm)
-                span = traced_operation(
-                    model_name=traced_model_name,
-                    model_provider=model_provider,
-                    name=span_name,
-                    session_id=session_id,
-                    ml_app=ml_app,
-                    _decorator=True,
-                )
+                span_kwargs = {
+                    "model_name": traced_model_name,
+                    "model_provider": model_provider,
+                    "name": span_name,
+                    "session_id": session_id,
+                    "ml_app": ml_app,
+                    "_decorator": True,
+                }
+                if operation_kind == "llm" and prompt is not None:
+                    span_kwargs["prompt"] = prompt
+                span = traced_operation(**span_kwargs)
                 return yield_from_async_gen(func, span, args, kwargs)
 
             @wraps(func)
@@ -87,14 +91,17 @@ def _inner_model_fn(operation_kind, **llmobs_kwargs):
                     return await func(*args, **kwargs)
                 traced_model_name, span_name = _get_llmobs_span_options(name, model_name, func)
                 traced_operation = getattr(LLMObs, operation_kind, LLMObs.llm)
-                with traced_operation(
-                    model_name=traced_model_name,
-                    model_provider=model_provider,
-                    name=span_name,
-                    session_id=session_id,
-                    ml_app=ml_app,
-                    _decorator=True,
-                ):
+                span_kwargs = {
+                    "model_name": traced_model_name,
+                    "model_provider": model_provider,
+                    "name": span_name,
+                    "session_id": session_id,
+                    "ml_app": ml_app,
+                    "_decorator": True,
+                }
+                if operation_kind == "llm" and prompt is not None:
+                    span_kwargs["prompt"] = prompt
+                with traced_operation(**span_kwargs) as span:
                     return await func(*args, **kwargs)
 
         else:
@@ -107,14 +114,17 @@ def _inner_model_fn(operation_kind, **llmobs_kwargs):
                 else:
                     traced_model_name, span_name = _get_llmobs_span_options(name, model_name, func)
                     traced_operation = getattr(LLMObs, operation_kind, LLMObs.llm)
-                    span = traced_operation(
-                        model_name=traced_model_name,
-                        model_provider=model_provider,
-                        name=span_name,
-                        session_id=session_id,
-                        ml_app=ml_app,
-                        _decorator=True,
-                    )
+                    span_kwargs = {
+                        "model_name": traced_model_name,
+                        "model_provider": model_provider,
+                        "name": span_name,
+                        "session_id": session_id,
+                        "ml_app": ml_app,
+                        "_decorator": True,
+                    }
+                    if operation_kind == "llm" and prompt is not None:
+                        span_kwargs["prompt"] = prompt
+                    span = traced_operation(**span_kwargs)
                     try:
                         yield from func(*args, **kwargs)
                     except (StopIteration, GeneratorExit):
@@ -132,14 +142,17 @@ def _inner_model_fn(operation_kind, **llmobs_kwargs):
                     return func(*args, **kwargs)
                 traced_model_name, span_name = _get_llmobs_span_options(name, model_name, func)
                 traced_operation = getattr(LLMObs, operation_kind, LLMObs.llm)
-                with traced_operation(
-                    model_name=traced_model_name,
-                    model_provider=model_provider,
-                    name=span_name,
-                    session_id=session_id,
-                    ml_app=ml_app,
-                    _decorator=True,
-                ):
+                span_kwargs = {
+                    "model_name": traced_model_name,
+                    "model_provider": model_provider,
+                    "name": span_name,
+                    "session_id": session_id,
+                    "ml_app": ml_app,
+                    "_decorator": True,
+                }
+                if operation_kind == "llm" and prompt is not None:
+                    span_kwargs["prompt"] = prompt
+                with traced_operation(**span_kwargs) as span:
                     return func(*args, **kwargs)
 
         return generator_wrapper if (isgeneratorfunction(func) or isasyncgenfunction(func)) else wrapper
