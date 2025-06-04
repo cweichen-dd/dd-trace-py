@@ -803,7 +803,6 @@ def test_prompt_instance_id_generation(llmobs):
     with llmobs.llm(
         model_name="test_model",
         prompt=Prompt(
-            template="{var1} {var3}",
             chat_template=[{"role": "user", "content": "{var1} {var3}"}],
             variables={"var1": "var1", "var2": "var3"},
             version="1.0.0",
@@ -823,7 +822,6 @@ def test_prompt_in_llm_annotation(llmobs):
     with llmobs.llm(
         model_name="test_model",
         prompt=Prompt(
-            template="{var1} {var3}",
             chat_template=[{"role": "user", "content": "{var1} {var3}"}],
             variables={"var1": "var1", "var2": "var3"},
             version="1.0.0",
@@ -833,7 +831,6 @@ def test_prompt_in_llm_annotation(llmobs):
         ),
     ) as span:
         assert span._get_ctx_item(INPUT_PROMPT) == {
-            "template": "{var1} {var3}",
             "instance_id": mock.ANY,
             "chat_template": [{"role": "user", "content": "{var1} {var3}"}],
             "variables": {"var1": "var1", "var2": "var3"},
@@ -1712,7 +1709,6 @@ def test_prompt_context_modifies_prompt(llmobs, llmobs_backend):
     with llmobs.prompt_context(
         name="test",
         prompt_id="test",
-        template="test {{value}}",
         chat_template=[{"role": "user", "content": "test {{value}}"}],
         variables={"value": "test"},
     ):
