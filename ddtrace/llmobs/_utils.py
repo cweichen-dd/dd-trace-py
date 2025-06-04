@@ -184,6 +184,9 @@ def _strict_validate_prompt(prompt: Union[Dict[str, Any], Prompt]):
     if template is None and chat_template is None:
         raise ValueError("Either 'template' or 'chat_template' must be provided.")
 
+    if template and chat_template:
+        raise ValueError("Only one of 'template' or 'chat_template' can be provided, not both.")
+
 
 class LinkTracker:
     def __init__(self, object_span_links=None):
