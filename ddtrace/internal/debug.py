@@ -1,7 +1,6 @@
 import datetime
 import os
 import platform
-import re
 import sys
 from typing import TYPE_CHECKING  # noqa:F401
 from typing import Any  # noqa:F401
@@ -128,9 +127,8 @@ def collect(tracer):
         ddtrace_enabled=ddtrace.config._tracing_enabled,
         sampling_rules=sampling_rules,
         service=ddtrace.config.service or "",
-        debug=ddtrace.config._debug_mode,
-        auto_instrumented="ddtrace.bootstrap.sitecustomize" in sys.modules,
-        analytics_enabled=ddtrace.config._analytics_enabled,
+        debug=log.isEnabledFor(logging.DEBUG),
+        enabled_cli="ddtrace" in os.getenv("PYTHONPATH", ""),
         log_injection_enabled=ddtrace.config._logs_injection,
         health_metrics_enabled=ddtrace.config._health_metrics_enabled,
         runtime_metrics_enabled=ddtrace.config._runtime_metrics_enabled,
@@ -164,6 +162,16 @@ def pretty_collect(tracer, color=True):
         ENDC = "\033[0m"
         BOLD = "\033[1m"
 
+    if not color:
+        bcolors.HEADER = ""
+        bcolors.OKBLUE = ""
+        bcolors.OKCYAN = ""
+        bcolors.OKGREEN = ""
+        bcolors.WARNING = ""
+        bcolors.FAIL = ""
+        bcolors.ENDC = ""
+        bcolors.BOLD = ""
+
     info = collect(tracer)
 
     info_pretty = """{blue}{bold}Tracer Configurations:{end}
@@ -174,7 +182,6 @@ def pretty_collect(tracer, color=True):
     Debug logging: {debug}
     Writing traces to: {agent_url}
     Agent error: {agent_error}
-    App Analytics enabled(deprecated): {analytics_enabled}
     Log injection enabled: {log_injection_enabled}
     Health metrics enabled: {health_metrics_enabled}
     Priority sampling enabled: {priority_sampling_enabled}
@@ -194,7 +201,6 @@ def pretty_collect(tracer, color=True):
         debug=info.get("debug"),
         agent_url=info.get("agent_url") or "Not writing at the moment, is your tracer running?",
         agent_error=info.get("agent_error") or "None",
-        analytics_enabled=info.get("analytics_enabled"),
         log_injection_enabled=info.get("log_injection_enabled"),
         health_metrics_enabled=info.get("health_metrics_enabled"),
         priority_sampling_enabled=info.get("priority_sampling_enabled"),
@@ -248,12 +254,4 @@ def pretty_collect(tracer, color=True):
 
     info_pretty += "\n\n" + summary
 
-    if color is False:
-        return escape_ansi(info_pretty)
-
     return info_pretty
-
-
-def escape_ansi(line):
-    ansi_escape = re.compile(r"(?:\x1B[@-_]|[\x80-\x9F])[0-9:;<=>?]*[ -/]*[@-~]")
-    return ansi_escape.sub("", line)
