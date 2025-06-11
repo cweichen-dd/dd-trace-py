@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+import csv
+import sys
+from collections import defaultdict
+
+if len(sys.argv) != 2:
+    print(f"Usage: {sys.argv[0]} trace.csv", file=sys.stderr)
+    sys.exit(1)
+
+trace_file = sys.argv[1]
+
+# Parse entries
+entries = []
+with open(trace_file, newline="") as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        entries.append(
+            {
+                "module": row["module"],
+                "tid": int(row["tid"]),
+                "depth": int(row["depth"]),
+                "start_ns": int(row["start_ns"]),
+                "end_ns": int(row["end_ns"]),
+                "self_ns": int(row["self_ns"]),
+            }
+        )
+
+entries = sorted(entries, key=lambda e: e["end_ns"])
+
+import_map = defaultdict(list)
+for i, e in enumerate(entries):
+    if e["depth"] == 1:
+        import_map[None].append(e)
+        continue
+
+    for p in entries[i + 1 :]:
+        if p["depth"] < e["depth"]:
+            import_map[p["module"]].append(e)
+            break
+    else:
+        import_map[None].append(e)
+
+
+def calculate_cumulative_ns(entry, import_map):
+    cumulative_ns = entry["self_ns"]
+    for child in import_map[entry["module"]]:
+        cumulative_ns += calculate_cumulative_ns(child, import_map)
+    entry["cumulative_ns"] = cumulative_ns
+    return cumulative_ns
+
+
+# Sort for final output: by end time
+entries.sort(key=lambda e: e["end_ns"])
+for e in import_map[None]:
+    e["cumulative_ns"] = calculate_cumulative_ns(e, import_map)
+
+# Final output
+print("import time: self [us] | cumulative | module")
+for e in entries:
+    indent = "  " * (e["depth"] - 1)
+    print(f"import time: {e['self_ns'] // 1000:9} | {e['cumulative_ns'] // 1000:10} | {indent}{e['module']}")

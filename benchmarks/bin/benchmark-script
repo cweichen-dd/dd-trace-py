@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ $# -lt 1 ]; then
+  echo "Usage: trace-py <python command...>"
+  exit 1
+fi
+
+PYTHON_CMD=("$@")
+PYTHON_BIN=$(which python)
+TRACE_BIN=/usr/local/bin/pause-stub
+BPFTRACE_IMPORTS_SCRIPT=/usr/local/share/bpftrace-imports.bt
+ARTIFACT_DIR=/artifacts
+
+mkdir -p "$ARTIFACT_DIR"
+
+echo "[trace-py] Running Warmup cycle..."
+WARMUP=1 "${PYTHON_CMD[@]}"
+
+# Launch paused process
+$TRACE_BIN "${PYTHON_CMD[@]}" &
+CHILD_PID=$!
+echo "[trace-py] Started paused Python process (PID ${CHILD_PID})"
+ARTIFACT_DIR="${ARTIFACT_DIR}/${CHILD_PID}"
+mkdir -p "${ARTIFACT_DIR}"
+echo "[trace-py] Artifacts will be stored in ${ARTIFACT_DIR}"
+
+# Persist debug symbols
+BUILD_ID=$(readelf -n "${PYTHON_BIN}" | awk '/Build ID:/ {print $3}')
+echo "${BUILD_ID}" > "${ARTIFACT_DIR}/python-build-id.txt"
+
+# Start perf
+PERF_DATA="${ARTIFACT_DIR}/perf.data"
+perf --no-pager buildid-cache --purge-all
+perf record -F max -g --call-graph dwarf,65528 --inherit \
+  --no-buildid-cache -o "${PERF_DATA}" -p "${CHILD_PID}" -- sleep 99999 &
+PERF_PID=$!
+
+# Start bpftrace
+BPFTRACE_IMPORTS_OUT="${ARTIFACT_DIR}/bpftrace-imports.csv"
+bpftrace -q "${BPFTRACE_IMPORTS_SCRIPT}" > "${BPFTRACE_IMPORTS_OUT}" 2> >(grep -v 'uprobe_events' | grep -v 'failed to detach probe' >&2) &
+BPFTRACE_IMPORTS_PID=$!
+
+sleep 1
+kill -CONT "$CHILD_PID"
+echo "[trace-py] Resumed Python process (PID ${CHILD_PID})"
+wait "$CHILD_PID"
+echo "[trace-py] Python process (PID ${CHILD_PID}) has finished"
+sleep 1
+
+# Cleanup tracing
+echo "[trace-py] Stopping tracing..."
+kill "${PERF_PID}" "${BPFTRACE_IMPORTS_PID}" 2>/dev/null || true
+wait "${PERF_PID}" "${BPFTRACE_IMPORTS_PID}" 2>/dev/null || true
+
+# Generate flamegraph
+echo "[trace-py] Generating reports..."
+FLAME_SVG="${ARTIFACT_DIR}/flamegraph.svg"
+PERF_OUT="${ARTIFACT_DIR}/perf.data"
+perf script -i "${PERF_DATA}" > "${PERF_OUT}"
+perf script -i "${PERF_DATA}" | stackcollapse-perf.pl | flamegraph.pl > "${FLAME_SVG}"
+
+# Convert bpftrace-imports csv to importtime format
+echo "[trace-py] Converting bpftrace imports to importtime format..."
+IMPORTTIME_OUT="${ARTIFACT_DIR}/importtime.txt"
+bpftrace-imports-to-importtime "${BPFTRACE_IMPORTS_OUT}" > "${IMPORTTIME_OUT}"
+TUNA_DIR="${ARTIFACT_DIR}/tuna/"
+mkdir -p "${TUNA_DIR}"
+tuna --outdir "${TUNA_DIR}" "${IMPORTTIME_OUT}"
+
+echo "[trace-py] Artifacts:"
+echo "  Perf data:       ${PERF_DATA}"
+echo "  Perf script:     ${PERF_OUT}"
+echo "  Flamegraph SVG:  ${FLAME_SVG}"
+echo "  Python imports:  ${BPFTRACE_IMPORTS_OUT}"
+echo "  Importtime:      ${IMPORTTIME_OUT}"
+echo "  Tuna:            ${TUNA_DIR}"

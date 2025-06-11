@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bm"
+dynamic = ["version"]
+requires-python = ">=3.12"
+dependencies = ["pyperf"]
+
+[tool.setuptools]
+packages = ["bm"]

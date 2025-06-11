@@ -1,0 +1,35 @@
+BEGIN {
+  printf("module,tid,depth,start_ns,end_ns,self_ns\n");
+}
+
+usdt:/opt/python/bin/python:import__find__load__start {
+  @depth[tid] += 1;
+  @start[tid, @depth[tid]] = nsecs;
+  @mod[tid, @depth[tid]] = str(arg0);
+}
+
+usdt:/opt/python/bin/python:import__find__load__done /@start[tid, @depth[tid]]/ {
+  $end = nsecs;
+  $depth = @depth[tid];
+  $mod = @mod[tid, $depth];
+  $total = (uint64)($end - @start[tid, $depth]);
+  $child = @child[tid, $depth] ? @child[tid, $depth] : 0;
+  $self = $total - $child;
+
+  printf("\"%s\",%d,%d,%llu,%llu,%llu\n", $mod, tid, $depth, @start[tid, $depth], $end, $self);
+
+  @child[tid, $depth - 1] += $total;
+
+  // cleanup
+  delete(@mod[tid, $depth]);
+  delete(@child[tid, $depth]);
+  delete(@start[tid, $depth]);
+  @depth[tid] -= 1;
+  if (@depth[tid] == 0) {
+    delete(@depth[tid]);
+  }
+}
+
+END {
+  clear(@child);
+}

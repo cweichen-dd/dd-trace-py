@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+import sys
+import os
+import tomllib
+from pathlib import Path
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Run a benchmark")
+    parser.add_argument("benchmark_name", help="Name of the benchmark to run")
+    parser.add_argument("--wheel", help="Path to project wheel to install before benchmark")
+    parser.add_argument("--verbose", action="store_true", help="Show verbose output from subprocesses")
+    args = parser.parse_args()
+
+    benchmark_name = args.benchmark_name
+    benchmark_path = Path(f"/project/benchmarks/{benchmark_name}")
+
+    if not benchmark_path.exists():
+        print(f"Error: Benchmark '{benchmark_name}' not found at {benchmark_path}")
+        sys.exit(1)
+
+    os.chdir(benchmark_path)
+
+    # Step 0: Install project wheel if provided
+    if args.wheel:
+        wheel_path = Path(args.wheel)
+        if not wheel_path.exists():
+            print(f"Error: Wheel file not found at {wheel_path}")
+            sys.exit(1)
+        
+        print(f"Installing project wheel: {wheel_path}")
+        if args.verbose:
+            result = subprocess.run([
+                sys.executable, "-m", "pip", "install", str(wheel_path)
+            ])
+        else:
+            result = subprocess.run([
+                sys.executable, "-m", "pip", "install", str(wheel_path)
+            ], capture_output=True, text=True)
+        
+        if result.returncode != 0:
+            print(f"Error installing project wheel:")
+            if not args.verbose and hasattr(result, 'stderr'):
+                print(result.stderr)
+            sys.exit(1)
+
+    # Step 1: Install the benchmark package
+    print(f"Installing benchmark package: {benchmark_path}")
+    if args.verbose:
+        result = subprocess.run([sys.executable, "-m", "pip", "install", "."])
+    else:
+        result = subprocess.run([sys.executable, "-m", "pip", "install", "."], capture_output=True, text=True)
+
+    if result.returncode != 0:
+        print(f"Error installing benchmark package:")
+        if not args.verbose and hasattr(result, 'stderr'):
+            print(result.stderr)
+        sys.exit(1)
+
+    # Step 2: Read pyproject.toml metadata
+    pyproject_path = benchmark_path / "pyproject.toml"
+    if not pyproject_path.exists():
+        print(f"Error: pyproject.toml not found at {pyproject_path}")
+        sys.exit(1)
+
+    with open(pyproject_path, "rb") as f:
+        config = tomllib.load(f)
+
+    bm_config = config.get("tool", {}).get("bm", {})
+    if not bm_config:
+        print(f"Error: [tool.bm] section not found in {pyproject_path}")
+        sys.exit(1)
+
+    benchmark_type = bm_config.get("type")
+    if not benchmark_type:
+        print(f"Error: 'type' not specified in [tool.bm] section")
+        sys.exit(1)
+
+    # Step 3: Execute based on type
+    artifacts_dir = Path(f"/artifacts/{benchmark_name}")
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+
+    if benchmark_type == "pyperf":
+        print(f"Running pyperf benchmark: {benchmark_name}")
+        run_benchmark_script = benchmark_path / "run_benchmark.py"
+
+        if not run_benchmark_script.exists():
+            print(f"Error: run_benchmark.py not found at {run_benchmark_script}")
+            sys.exit(1)
+
+        output_file = artifacts_dir / f"{benchmark_name}.json"
+        
+        # Set environment variables for perf recording
+        env = os.environ.copy()
+        env["PYPERF_PERF_RECORD_DATA_DIR"] = str(artifacts_dir)
+        env["PYPERF_PERF_RECORD_EXTRA_OPTS"] = "-F max -g --call-graph dwarf,65528 --inherit --no-buildid-cache"
+        
+        result = subprocess.run([sys.executable, str(run_benchmark_script), f"--output={output_file}", "--hook=perf_record"], env=env)
+
+        if result.returncode != 0:
+            print(f"Error running benchmark:")
+            sys.exit(1)
+
+        print(f"Benchmark completed successfully. Artifacts saved to {artifacts_dir}")
+    else:
+        print(f"Error: Unsupported benchmark type: {benchmark_type}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

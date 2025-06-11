@@ -1,66 +1,108 @@
-FROM debian:buster-slim as base
+# ---- Stage 1: Build Python 3.13.4 with frame pointers and USDT ----
+FROM debian:bookworm-slim AS python-builder
 
-ARG PYTHON_VERSION=3.13
-ARG PYENV_VERSION=2.5.5
-RUN apt-get update && apt-get install --no-install-recommends -y \
-    make build-essential libssl-dev zlib1g-dev \
-    libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm \
-    libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev \
-    git ca-certificates
-ENV PYENV_ROOT "/pyenv"
-WORKDIR "$PYENV_ROOT"
-ENV PATH "$PYENV_ROOT/shims:$PYENV_ROOT/bin:$PATH"
-RUN git clone --depth 1 https://github.com/pyenv/pyenv.git --branch "v$PYENV_VERSION" --single-branch "$PYENV_ROOT"
-RUN pyenv install "$PYTHON_VERSION"
+ARG PYTHON_VERSION=3.13.4
+ENV PYTHON_HOME=/opt/python
+ENV PYTHON_SRC_DIR=/usr/src/python
 
-FROM debian:buster-slim
-ARG PYTHON_VERSION=3.13
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    wget \
+    libffi-dev \
+    libc6-dbg \
+    libssl-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    libncursesw5-dev \
+    xz-utils \
+    tk-dev \
+    ca-certificates \
+    systemtap \
+    systemtap-sdt-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY --from=base /pyenv /pyenv
-ENV PYENV_ROOT "/pyenv"
-ENV PATH "$PYENV_ROOT/shims:$PYENV_ROOT/bin:/root/.cargo/bin/:$PATH"
-RUN pyenv global "$PYTHON_VERSION"
-RUN pip install -U pip
+WORKDIR $PYTHON_SRC_DIR
 
-ARG SCENARIO=base
+RUN wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz && \
+    tar -xzf Python-${PYTHON_VERSION}.tgz
 
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONDONTWRITEBYTECODE 1
+WORKDIR $PYTHON_SRC_DIR/Python-${PYTHON_VERSION}
 
-WORKDIR /app
+RUN ./configure \
+        --prefix=$PYTHON_HOME \
+        --with-pydebug \
+        --with-dtrace \
+        CFLAGS="-fno-omit-frame-pointer -fno-optimize-sibling-calls" \
+    && make -j$(nproc) && make install
 
-# Install required system dependencies
-RUN apt-get update && apt-get install --no-install-recommends -y \
-  curl \
-  git \
-  ca-certificates \
-  # ddtrace includes c extensions
-  build-essential \
-  # uuid is used to generate identifier for run if one is not provided
-  uuid-runtime \
-  # provides ab for testing
-  apache2-utils \
-  # provides sqlite3 for sql injection tests
-  sqlite3 \
-  # cleaning up unused files
-  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-  && rm -rf /var/lib/apt/lists/*
+# ---- Stage 2: Final runtime image ----
+FROM debian:bookworm-slim AS final
+
+ARG RUST_VERSION=1.87.0
+ARG PYPERF_VERSION=2.9.0
+ARG VIZTRACER_VERSION=1.0.4
+ARG MEMRAY_VERSION=1.17.2
+ARG OBJGRAPH_VERSION=3.6.2
+ARG PYSPY_VERSION=0.4.0
+
+ENV PYTHONPERFSUPPORT=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHON_HOME="/opt/python"
+ENV PERF_TOOLS_PATH="/opt/perf-tools"
+ENV FLAMEGRAPH_PATH="/opt/flamegraph"
+ENV PATH="${PYTHON_HOME}/bin:${PERF_TOOLS_PATH}/bin:${FLAMEGRAPH_PATH}:$PATH"
+
 
 # Install Rust toolchain
 RUN curl https://sh.rustup.rs -sSf | \
-    sh -s -- --default-toolchain stable -y
+    sh -s -- --default-toolchain ${RUST_VERSION} -y
 
-# Add base common files used by all scenarios
-COPY ./base/ /app/
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    binutils \
+    bpftrace \
+    linux-perf \
+    libc6-dbg \
+    elfutils \
+    gdb \
+    git \
+    file \
+    procps \
+    curl \
+    ca-certificates \
+    systemtap \
+    systemtap-sdt-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && git clone --depth 1 https://github.com/brendangregg/perf-tools ${PERF_TOOLS_PATH} \
+    && git clone --depth 1 https://github.com/brendangregg/Flamegraph ${FLAMEGRAPH_PATH}
 
-# Add bm package for scenario framework
-COPY ./bm/ /app/bm/
+COPY --from=python-builder $PYTHON_HOME $PYTHON_HOME
+RUN ln -s $PYTHON_HOME/bin/python3.13 $PYTHON_HOME/bin/python \
+    && ln -s $PYTHON_HOME/bin/pip3 $PYTHON_HOME/bin/pip \
+    && pip install --no-cache-dir -U \
+    pip \
+    uv \
+    "pyperf==${PYPERF_VERSION}" \
+    "viztracer==${VIZTRACER_VERSION}" \
+    "py-spy==${PYSPY_VERSION}" \
+    "memray==${MEMRAY_VERSION}" \
+    "objgraph==${OBJGRAPH_VERSION}" \
+    "tuna==0.5.11"
 
-# Add scenario code, overriding anything from base
-COPY ./${SCENARIO}/ /app/
+COPY bin/pause-stub /usr/local/bin/pause-stub
+COPY bin/benchmark-script /usr/local/bin/benchmark-script
+COPY bin/run-benchmark /usr/local/bin/run-benchmark
+COPY bin/bpftrace-imports-to-importtime /usr/local/bin/bpftrace-imports-to-importtime
+COPY share/bpftrace-imports.bt /usr/local/share/bpftrace-imports.bt
 
-ENV SCENARIO=${SCENARIO}
-ENV PROFILE_BENCHMARKS=0
+COPY bm/ /packages/bm
+RUN pip install /packages/bm
 
-ENTRYPOINT ["/app/entrypoint"]
-CMD ["/app/benchmark"]
+RUN mkdir -p /artifacts
+
+WORKDIR /project
+VOLUME ["/artifacts"]
+
+ENTRYPOINT ["run-benchmark"]
