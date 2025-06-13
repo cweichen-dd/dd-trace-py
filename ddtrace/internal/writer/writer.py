@@ -525,7 +525,9 @@ class AgentWriter(HTTPWriter):
         additional_header_str = os.environ.get("_DD_TRACE_WRITER_ADDITIONAL_HEADERS")
         if additional_header_str is not None:
             _headers.update(parse_tags_str(additional_header_str))
-        self._response_cb = response_callback
+        self._response_cbs: Set[Callable[[AgentResponse], None]] = set()
+        if response_callback is not None:
+            self._response_cbs.add(response_callback)
         self._report_metrics = report_metrics
         super(AgentWriter, self).__init__(
             intake_url=agent_url,
@@ -555,6 +557,14 @@ class AgentWriter(HTTPWriter):
             report_metrics=self._report_metrics,
         )
         return new_instance
+
+    def register_cb(self, callback: Callable[[AgentResponse], None]) -> None:
+        """Register a callback to be called with the response from the agent."""
+        self._response_cbs.add(callback)
+
+    def unregister_cb(self, callback: Callable[[AgentResponse], None]) -> None:
+        """Unregister a callback."""
+        self._response_cbs.discard(callback)
 
     @property
     def agent_url(self):
@@ -591,14 +601,15 @@ class AgentWriter(HTTPWriter):
         if response.status in [404, 415]:
             self._downgrade(response, client)
         elif response.status < 400:
-            if self._response_cb:
+            if self._response_cbs:
                 raw_resp = response.get_json()
                 if raw_resp and "rate_by_service" in raw_resp:
-                    self._response_cb(
-                        AgentResponse(
-                            rate_by_service=raw_resp["rate_by_service"],
+                    for cb in self._response_cbs:
+                        cb(
+                            AgentResponse(
+                                rate_by_service=raw_resp["rate_by_service"],
+                            )
                         )
-                    )
         return response
 
     def start(self):
