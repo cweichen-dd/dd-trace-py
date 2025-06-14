@@ -40,7 +40,7 @@ def _prime_tracer_with_priority_sample_rate_from_agent(t, service):
     t.flush()
 
     sampler_key = "service:{},env:".format(service)
-    while sampler_key not in t._span_aggregator.sampling_processor.sampler._by_service_samplers:
+    while sampler_key not in t._span_aggregator.sampling_processor.sampler._agent_sampling_rules:
         time.sleep(1)
         s = t.trace("operation", service=service)
         s.finish()
@@ -69,9 +69,9 @@ def test_priority_sampling_rate_honored():
 
     _prime_tracer_with_priority_sample_rate_from_agent(t, service)
     sampler_key = "service:{},env:".format(service)
-    assert sampler_key in t._span_aggregator.sampling_processor.sampler._by_service_samplers
+    assert sampler_key in t._span_aggregator.sampling_processor.sampler._agent_sampling_rules
 
-    rate_from_agent = t._span_aggregator.sampling_processor.sampler._by_service_samplers[sampler_key].sample_rate
+    rate_from_agent = t._span_aggregator.sampling_processor.sampler._agent_sampling_rules[sampler_key].sample_rate
     assert 0 < rate_from_agent < 1
 
     _turn_tracer_into_dummy(t)
@@ -102,10 +102,10 @@ def test_priority_sampling_response():
     _id = time.time()
     service = "my-svc-{}".format(_id)
     sampler_key = "service:{},env:".format(service)
-    assert sampler_key not in t._span_aggregator.sampling_processor.sampler._by_service_samplers
+    assert sampler_key not in t._span_aggregator.sampling_processor.sampler._agent_sampling_rules
     _prime_tracer_with_priority_sample_rate_from_agent(t, service)
     assert (
-        sampler_key in t._span_aggregator.sampling_processor.sampler._by_service_samplers
+        sampler_key in t._span_aggregator.sampling_processor.sampler._agent_sampling_rules
     ), "after fetching priority sample rates from the agent, the tracer should hold those rates"
     t.shutdown()
 
@@ -149,7 +149,7 @@ def test_sampling_rate_honored_tracer_configure():
 
     _prime_tracer_with_priority_sample_rate_from_agent(t, service)
 
-    assert len(t._span_aggregator.sampling_processor.sampler._by_service_samplers)
+    assert len(t._span_aggregator.sampling_processor.sampler._agent_sampling_rules)
 
     class CustomFilter(TraceFilter):
         def process_trace(self, trace):
@@ -159,7 +159,7 @@ def test_sampling_rate_honored_tracer_configure():
             return trace
 
     t.configure(trace_processors=[CustomFilter()])  # Triggers AgentWriter recreate
-    assert len(t._span_aggregator.sampling_processor.sampler._by_service_samplers)
+    assert len(t._span_aggregator.sampling_processor.sampler._agent_sampling_rules)
 
 
 @pytest.mark.skipif(AGENT_VERSION != "testagent", reason="Tests only compatible with a testagent")

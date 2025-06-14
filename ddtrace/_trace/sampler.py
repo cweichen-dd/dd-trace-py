@@ -75,7 +75,7 @@ class DatadogSampler:
         "limiter",
         "rules",
         "_rate_limit_always_on",
-        "_by_service_samplers",
+        "_agent_sampling_rules",
     )
     _default_key = "service:,env:"
 
@@ -102,7 +102,7 @@ class DatadogSampler:
         else:
             self.rules: List[SamplingRule] = rules or []
         # Set Agent based samplers
-        self._by_service_samplers = agent_sampling_rules or {}
+        self._agent_sampling_rules = agent_sampling_rules or {}
         # Set rate limiter
         self._rate_limit_always_on: bool = rate_limit_always_on
         if rate_limit is None:
@@ -120,10 +120,10 @@ class DatadogSampler:
         samplers: Dict[str, RateSampler] = {}
         for key, sample_rate in rate_by_service.items():
             samplers[key] = RateSampler(sample_rate)
-        self._by_service_samplers = samplers
+        self._agent_sampling_rules = samplers
 
     def __str__(self):
-        rates = {key: sampler.sample_rate for key, sampler in self._by_service_samplers.items()}
+        rates = {key: sampler.sample_rate for key, sampler in self._agent_sampling_rules.items()}
         return "{}(agent_rates={!r}, limiter={!r}, rules={!r}), rate_limit_always_on={!r}".format(
             self.__class__.__name__,
             rates,
@@ -182,11 +182,11 @@ class DatadogSampler:
             sample_rate = matched_rule.sample_rate
         else:
             key = self._key(span.service, span.get_tag(ENV_KEY))
-            if key in self._by_service_samplers:
+            if key in self._agent_sampling_rules:
                 # Agent service based sampling
                 agent_service_based = True
-                sampled = self._by_service_samplers[key].sample(span)
-                sample_rate = self._by_service_samplers[key].sample_rate
+                sampled = self._agent_sampling_rules[key].sample(span)
+                sample_rate = self._agent_sampling_rules[key].sample_rate
 
         if matched_rule or self._rate_limit_always_on:
             # Avoid rate limiting when trace sample rules and/or sample rates are NOT provided
