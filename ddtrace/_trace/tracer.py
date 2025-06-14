@@ -93,6 +93,7 @@ def _default_span_processors_factory(
     writer: Optional[TraceWriter],
     partial_flush_enabled: bool,
     partial_flush_min_spans: int,
+    agent_sampling_rules: Optional[Dict],
     profiling_span_processor: EndpointCallCounterProcessor,
 ) -> Tuple[List[SpanProcessor], Optional["AppSecSpanProcessor"], SpanAggregator]:
     """Construct the default list of span processors to use."""
@@ -146,6 +147,7 @@ def _default_span_processors_factory(
         partial_flush_min_spans=partial_flush_min_spans,
         trace_processors=trace_processors,
         writer=writer,
+        agent_sampling_rules=agent_sampling_rules,
     )
     return span_processors, appsec_processor, span_aggregagtor
 
@@ -204,6 +206,7 @@ class Tracer(object):
             None,
             config._partial_flush_enabled,
             config._partial_flush_min_spans,
+            None,
             self._endpoint_call_counter_span_processor,
         )
         if config._data_streams_enabled:
@@ -454,6 +457,7 @@ class Tracer(object):
             self._span_aggregator.writer,
             self._span_aggregator.partial_flush_enabled,
             self._span_aggregator.partial_flush_min_spans,
+            self._span_aggregator.sampling_processor.sampler._by_service_samplers,
             self._endpoint_call_counter_span_processor,
         )
 

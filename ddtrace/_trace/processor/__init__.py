@@ -128,7 +128,13 @@ class TraceSamplingProcessor(TraceProcessor):
       Agent even if the dropped trace is not (as is the case when trace stats computation is enabled).
     """
 
-    def __init__(self, compute_stats_enabled: bool, single_span_rules: List[SpanSamplingRule], apm_opt_out: bool):
+    def __init__(
+        self,
+        compute_stats_enabled: bool,
+        single_span_rules: List[SpanSamplingRule],
+        apm_opt_out: bool,
+        agent_sampling_rules: Optional[dict] = None,
+    ):
         super(TraceSamplingProcessor, self).__init__()
         self._compute_stats_enabled = compute_stats_enabled
         self.single_span_rules = single_span_rules
@@ -137,9 +143,14 @@ class TraceSamplingProcessor(TraceProcessor):
             # If ASM is enabled but tracing is disabled,
             # we need to set the rate limiting to 1 trace per minute
             # for the backend to consider the service as alive.
-            self.sampler = DatadogSampler(rate_limit=1, rate_limit_window=60e9, rate_limit_always_on=True)
+            self.sampler = DatadogSampler(
+                rate_limit=1,
+                rate_limit_window=60e9,
+                rate_limit_always_on=True,
+                agent_sampling_rules=agent_sampling_rules,
+            )
         else:
-            self.sampler = DatadogSampler()
+            self.sampler = DatadogSampler(agent_sampling_rules=agent_sampling_rules)
 
     def process_trace(self, trace: List[Span]) -> Optional[List[Span]]:
         if trace:
@@ -262,13 +273,14 @@ class SpanAggregator(SpanProcessor):
         partial_flush_min_spans: int,
         trace_processors: Iterable[TraceProcessor],
         writer: Optional[TraceWriter] = None,
+        agent_sampling_rules: Optional[Dict] = None,
     ):
         # Set partial flushing
         self.partial_flush_enabled = partial_flush_enabled
         self.partial_flush_min_spans = partial_flush_min_spans
         # Initialize trace processors
         self.sampling_processor = TraceSamplingProcessor(
-            config._trace_compute_stats, get_span_sampling_rules(), asm_config._apm_opt_out
+            config._trace_compute_stats, get_span_sampling_rules(), asm_config._apm_opt_out, agent_sampling_rules
         )
         self.tags_processor = TraceTagsProcessor()
         self.trace_processors = trace_processors

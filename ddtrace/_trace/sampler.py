@@ -85,6 +85,7 @@ class DatadogSampler:
         rate_limit: Optional[int] = None,
         rate_limit_window: float = 1e9,
         rate_limit_always_on: bool = False,
+        agent_sampling_rules: Optional[Dict[str, RateSampler]] = None,
     ):
         """
         Constructor for DatadogSampler sampler
@@ -101,7 +102,7 @@ class DatadogSampler:
         else:
             self.rules: List[SamplingRule] = rules or []
         # Set Agent based samplers
-        self._by_service_samplers: Dict[str, RateSampler] = {}
+        self._by_service_samplers = agent_sampling_rules or {}
         # Set rate limiter
         self._rate_limit_always_on: bool = rate_limit_always_on
         if rate_limit is None:
