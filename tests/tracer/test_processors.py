@@ -67,7 +67,7 @@ def test_aggregator_single_span():
     aggr = SpanAggregator(
         partial_flush_enabled=False,
         partial_flush_min_spans=0,
-        trace_processors=[
+        dd_processors=[
             mock_proc1,
             mock_proc2,
         ],
@@ -99,7 +99,7 @@ def test_aggregator_bad_processor():
     aggr = SpanAggregator(
         partial_flush_enabled=False,
         partial_flush_min_spans=0,
-        trace_processors=[
+        dd_processors=[
             mock_good_before,
             mock_bad,
             mock_good_after,
@@ -119,7 +119,7 @@ def test_aggregator_bad_processor():
 
 def test_aggregator_multi_span():
     writer = DummyWriter()
-    aggr = SpanAggregator(partial_flush_enabled=False, partial_flush_min_spans=0, trace_processors=[])
+    aggr = SpanAggregator(partial_flush_enabled=False, partial_flush_min_spans=0, dd_processors=[])
     aggr.writer = writer
 
     # Normal usage
@@ -153,7 +153,7 @@ def test_aggregator_multi_span():
 
 def test_aggregator_partial_flush_0_spans():
     writer = DummyWriter()
-    aggr = SpanAggregator(partial_flush_enabled=True, partial_flush_min_spans=0, trace_processors=[])
+    aggr = SpanAggregator(partial_flush_enabled=True, partial_flush_min_spans=0)
     aggr.writer = writer
 
     # Normal usage
@@ -189,7 +189,7 @@ def test_aggregator_partial_flush_0_spans():
 
 def test_aggregator_partial_flush_2_spans():
     writer = DummyWriter()
-    aggr = SpanAggregator(partial_flush_enabled=True, partial_flush_min_spans=2, trace_processors=[])
+    aggr = SpanAggregator(partial_flush_enabled=True, partial_flush_min_spans=2)
     aggr.writer = writer
 
     # Normal usage
@@ -334,7 +334,7 @@ def test_trace_128bit_processor(trace_id):
 def test_span_creation_metrics():
     """Test that telemetry metrics are queued in batches of 100 and the remainder is sent on shutdown"""
     writer = DummyWriter()
-    aggr = SpanAggregator(partial_flush_enabled=False, partial_flush_min_spans=0, trace_processors=[])
+    aggr = SpanAggregator(partial_flush_enabled=False, partial_flush_min_spans=0)
     aggr.writer = writer
 
     with override_global_config(dict(_telemetry_enabled=True)):

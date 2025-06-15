@@ -183,7 +183,7 @@ class Tracer(object):
         self._span_aggregator = SpanAggregator(
             partial_flush_enabled=config._partial_flush_enabled,
             partial_flush_min_spans=config._partial_flush_min_spans,
-            trace_processors=[PeerServiceProcessor(_ps_config), BaseServiceProcessor()],
+            dd_processors=[PeerServiceProcessor(_ps_config), BaseServiceProcessor()],
         )
         if config._data_streams_enabled:
             # Inline the import to avoid pulling in ddsketch or protobuf
@@ -373,7 +373,7 @@ class Tracer(object):
                 self._span_aggregator.writer._api_version = "v0.4"
 
         if trace_processors:
-            self._span_aggregator.trace_processors = trace_processors
+            self._span_aggregator.user_processors = trace_processors
 
         if any(
             x is not None

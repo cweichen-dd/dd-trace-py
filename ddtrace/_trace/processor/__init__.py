@@ -270,7 +270,8 @@ class SpanAggregator(SpanProcessor):
         self,
         partial_flush_enabled: bool,
         partial_flush_min_spans: int,
-        trace_processors: List[TraceProcessor],
+        dd_processors: Optional[List[TraceProcessor]] = None,
+        user_processors: Optional[List[TraceProcessor]] = None,
     ):
         # Set partial flushing
         self.partial_flush_enabled = partial_flush_enabled
@@ -280,7 +281,8 @@ class SpanAggregator(SpanProcessor):
             config._trace_compute_stats, get_span_sampling_rules(), asm_config._apm_opt_out
         )
         self.tags_processor = TraceTagsProcessor()
-        self.trace_processors = trace_processors
+        self.dd_processors = dd_processors or []
+        self.user_processors = user_processors or []
         if SpanAggregator._use_log_writer():
             self.writer: TraceWriter = LogWriter()
         else:
@@ -313,7 +315,9 @@ class SpanAggregator(SpanProcessor):
             f"{self.partial_flush_min_spans}, "
             f"{self.sampling_processor},"
             f"{self.tags_processor},"
-            f"{self.trace_processors}, "
+            f"{self.dd_processors}, "
+            f"{self.user_processors}, "
+            f"{self._span_metrics}, "
             f"{self.writer})"
         )
 
@@ -375,7 +379,9 @@ class SpanAggregator(SpanProcessor):
                     finished[0].set_metric("_dd.py.partial_flush", num_finished)
 
                 spans: Optional[List[Span]] = finished
-                for tp in chain(self.trace_processors, [self.sampling_processor, self.tags_processor]):
+                for tp in chain(
+                    self.dd_processors, self.user_processors, [self.sampling_processor, self.tags_processor]
+                ):
                     try:
                         if spans is None:
                             return
