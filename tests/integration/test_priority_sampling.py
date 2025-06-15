@@ -130,8 +130,13 @@ def test_agent_sample_rate_keep():
 
 
 @skip_if_testagent
-@parametrize_with_all_encodings()
-def test_sampling_rate_honored_tracer_configure():
+@parametrize_with_all_encodings(
+    env={
+        "DD_TRACE_SAMPLING_RULES": '[{"sample_rate": 0.1, "service": "moon"}]',
+        "DD_SPAN_SAMPLING_RULES": '[{"service":"xyz", "sample_rate":0.23}]',
+    }
+)
+def test_sampling_configurations_are_not_reset_on_tracer_configure():
     import time
 
     from ddtrace.trace import TraceFilter
@@ -149,7 +154,13 @@ def test_sampling_rate_honored_tracer_configure():
 
     _prime_tracer_with_priority_sample_rate_from_agent(t, service)
 
-    assert len(t._span_aggregator.sampling_processor.sampler._agent_sampling_rules)
+    agent_sampling_rules = t._span_aggregator.sampling_processor.sampler._agent_sampling_rules
+    trace_sampling_rules = t._span_aggregator.sampling_processor.sampler.rules
+    single_span_sampling_rules = t._span_aggregator.sampling_processor.single_span_rules
+    assert (
+        agent_sampling_rules and trace_sampling_rules and single_span_sampling_rules
+    ), "Expected agent sampling rules, span sampling rules, trace sampling rules to be set"
+    f", got {agent_sampling_rules}, {trace_sampling_rules}, {single_span_sampling_rules}"
 
     class CustomFilter(TraceFilter):
         def process_trace(self, trace):
@@ -159,7 +170,20 @@ def test_sampling_rate_honored_tracer_configure():
             return trace
 
     t.configure(trace_processors=[CustomFilter()])  # Triggers AgentWriter recreate
-    assert len(t._span_aggregator.sampling_processor.sampler._agent_sampling_rules)
+    assert (
+        t._span_aggregator.sampling_processor.sampler._agent_sampling_rules == agent_sampling_rules
+    ), f"Expected agent sampling rules to be set to {agent_sampling_rules}, "
+    f"got {t._span_aggregator.sampling_processor.sampler._agent_sampling_rules}"
+
+    assert (
+        t._span_aggregator.sampling_processor.sampler.rules == trace_sampling_rules
+    ), f"Expected trace sampling rules to be set to {trace_sampling_rules}, "
+    f"got {t._span_aggregator.sampling_processor.sampler.rules}"
+
+    assert len(t._span_aggregator.sampling_processor.single_span_rules) == len(
+        single_span_sampling_rules
+    ), f"Expected single span sampling rules to be set to {single_span_sampling_rules}, "
+    f"got {t._span_aggregator.sampling_processor.single_span_rules}"
 
 
 @pytest.mark.skipif(AGENT_VERSION != "testagent", reason="Tests only compatible with a testagent")
