@@ -46,12 +46,10 @@ from ddtrace.internal.peer_service.processor import PeerServiceProcessor
 from ddtrace.internal.processor.endpoint_call_counter import EndpointCallCounterProcessor
 from ddtrace.internal.runtime import get_runtime_id
 from ddtrace.internal.schema.processor import BaseServiceProcessor
-from ddtrace.internal.service import ServiceStatusError
 from ddtrace.internal.utils import _get_metas_to_propagate
 from ddtrace.internal.utils.formats import format_trace_id
 from ddtrace.internal.writer import AgentWriter
 from ddtrace.internal.writer import HTTPWriter
-from ddtrace.internal.writer import TraceWriter
 from ddtrace.settings._config import config
 from ddtrace.settings.asm import config as asm_config
 from ddtrace.settings.peer_service import _ps_config
@@ -89,21 +87,9 @@ def _start_appsec_processor() -> Optional["AppSecSpanProcessor"]:
 
 
 def _default_span_processors_factory(
-    trace_filters: List[TraceProcessor],
-    writer: Optional[TraceWriter],
-    partial_flush_enabled: bool,
-    partial_flush_min_spans: int,
-    agent_sampling_rules: Optional[Dict],
     profiling_span_processor: EndpointCallCounterProcessor,
-) -> Tuple[List[SpanProcessor], Optional["AppSecSpanProcessor"], SpanAggregator]:
+) -> Tuple[List[SpanProcessor], Optional["AppSecSpanProcessor"]]:
     """Construct the default list of span processors to use."""
-    trace_processors: List[TraceProcessor] = []
-    trace_processors += [
-        PeerServiceProcessor(_ps_config),
-        BaseServiceProcessor(),
-    ]
-    trace_processors += trace_filters
-
     span_processors: List[SpanProcessor] = []
     span_processors += [TopLevelSpanProcessor()]
 
@@ -141,15 +127,7 @@ def _default_span_processors_factory(
 
     span_processors.append(profiling_span_processor)
 
-    # These need to run after all the other processors
-    span_aggregagtor = SpanAggregator(
-        partial_flush_enabled=partial_flush_enabled,
-        partial_flush_min_spans=partial_flush_min_spans,
-        trace_processors=trace_processors,
-        writer=writer,
-        agent_sampling_rules=agent_sampling_rules,
-    )
-    return span_processors, appsec_processor, span_aggregagtor
+    return span_processors, appsec_processor
 
 
 class Tracer(object):
@@ -183,8 +161,6 @@ class Tracer(object):
                     "Initializing multiple Tracer instances is not supported. Use ``ddtrace.trace.tracer`` instead.",
                 )
 
-        self._user_trace_processors: List[TraceProcessor] = []
-
         # globally set tags
         self._tags = config.tags.copy()
 
@@ -201,13 +177,14 @@ class Tracer(object):
             config._trace_compute_stats = False
         # Direct link to the appsec processor
         self._endpoint_call_counter_span_processor = EndpointCallCounterProcessor()
-        self._span_processors, self._appsec_processor, self._span_aggregator = _default_span_processors_factory(
-            self._user_trace_processors,
-            None,
-            config._partial_flush_enabled,
-            config._partial_flush_min_spans,
-            None,
-            self._endpoint_call_counter_span_processor,
+        self._span_processors, self._appsec_processor = _default_span_processors_factory(
+            self._endpoint_call_counter_span_processor
+        )
+        self._span_aggregator = SpanAggregator(
+            partial_flush_enabled=config._partial_flush_enabled,
+            partial_flush_min_spans=config._partial_flush_min_spans,
+            trace_processors=[PeerServiceProcessor(_ps_config), BaseServiceProcessor()],
+            writer=None,
         )
         if config._data_streams_enabled:
             # Inline the import to avoid pulling in ddsketch or protobuf
@@ -397,7 +374,7 @@ class Tracer(object):
                 self._span_aggregator.writer._api_version = "v0.4"
 
         if trace_processors:
-            self._user_trace_processors = trace_processors
+            self._span_aggregator.trace_processors = trace_processors
 
         if any(
             x is not None
@@ -443,21 +420,9 @@ class Tracer(object):
         """Re-initialize the tracer's processors and trace writer"""
         # Stop the writer.
         # This will stop the periodic thread in HTTPWriters, preventing memory leaks and unnecessary I/O.
-        try:
-            self._span_aggregator.writer.stop()
-        except ServiceStatusError:
-            # Some writers (ex: AgentWriter), start when the first trace chunk is encoded. Stopping
-            # the writer before that point will raise a ServiceStatusError.
-            pass
-        # Re-create the background writer thread
-        self._span_aggregator.writer = self._span_aggregator.writer.recreate()
         self.enabled = config._tracing_enabled
-        self._span_processors, self._appsec_processor, self._span_aggregator = _default_span_processors_factory(
-            self._user_trace_processors,
-            self._span_aggregator.writer,
-            self._span_aggregator.partial_flush_enabled,
-            self._span_aggregator.partial_flush_min_spans,
-            self._span_aggregator.sampling_processor.sampler._agent_sampling_rules,
+        self._span_aggregator._reset()
+        self._span_processors, self._appsec_processor = _default_span_processors_factory(
             self._endpoint_call_counter_span_processor,
         )
 

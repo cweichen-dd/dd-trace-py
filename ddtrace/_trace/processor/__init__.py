@@ -273,14 +273,13 @@ class SpanAggregator(SpanProcessor):
         partial_flush_min_spans: int,
         trace_processors: Iterable[TraceProcessor],
         writer: Optional[TraceWriter] = None,
-        agent_sampling_rules: Optional[Dict] = None,
     ):
         # Set partial flushing
         self.partial_flush_enabled = partial_flush_enabled
         self.partial_flush_min_spans = partial_flush_min_spans
         # Initialize trace processors
         self.sampling_processor = TraceSamplingProcessor(
-            config._trace_compute_stats, get_span_sampling_rules(), asm_config._apm_opt_out, agent_sampling_rules
+            config._trace_compute_stats, get_span_sampling_rules(), asm_config._apm_opt_out
         )
         self.tags_processor = TraceTagsProcessor()
         self.trace_processors = trace_processors
@@ -495,3 +494,24 @@ class SpanAggregator(SpanProcessor):
                     TELEMETRY_NAMESPACE.TRACERS, metric_name, count, tags=((tag_name, tag_value),)
                 )
             self._span_metrics[metric_name] = defaultdict(int)
+
+    def _reset(self):
+        try:
+            self.writer.stop()
+        except ServiceStatusError:
+            # Some writers (ex: AgentWriter), start when the first trace chunk is encoded. Stopping
+            # the writer before that point will raise a ServiceStatusError.
+            pass
+        # Re-create the background writer thread
+        self.writer = self.writer.recreate()
+        self.sampling_processor = TraceSamplingProcessor(
+            config._trace_compute_stats,
+            get_span_sampling_rules(),
+            asm_config._apm_opt_out,
+            self.sampling_processor.sampler._agent_sampling_rules,
+        )
+        self._traces = defaultdict(lambda: _Trace())
+        self._span_metrics = {
+            "spans_created": defaultdict(int),
+            "spans_finished": defaultdict(int),
+        }
