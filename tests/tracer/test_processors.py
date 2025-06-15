@@ -83,6 +83,78 @@ def test_aggregator_single_span():
     assert writer.pop() == [span]
 
 
+def test_aggregator_user_processors():
+    """Test that user processors are called after dd processors and can override tags"""
+
+    class Proc(TraceProcessor):
+        def process_trace(self, trace):
+            assert len(trace) == 1
+            trace[0].set_tag("dd_processor")
+            trace[0].set_tag("final_processor", "dd")
+            return trace
+
+    class UserProc(TraceProcessor):
+        def process_trace(self, trace):
+            assert len(trace) == 1
+            trace[0].set_tag("user_processor")
+            trace[0].set_tag("final_processor", "user")
+            return trace
+
+    aggr = SpanAggregator(
+        partial_flush_enabled=False,
+        partial_flush_min_spans=0,
+        dd_processors=[Proc()],
+        user_processors=[UserProc()],
+    )
+
+    with Span("span", on_finish=[aggr.on_span_finish]) as span:
+        aggr.on_span_start(span)
+
+    assert span.get_tag("dd_processor")
+    assert span.get_tag("user_processor")
+    assert span.get_tag("final_processor") == "user"
+
+
+def test_aggregator_reset():
+    """Test that the aggregator can reset trace buffers, sampling processor and trace writer"""
+
+    class DDProc(TraceProcessor):
+        def process_trace(self, trace):
+            return trace
+
+    class UserProc(TraceProcessor):
+        def process_trace(self, trace):
+            return trace
+
+    dd_proc = DDProc()
+    user_proc = UserProc()
+    aggr = SpanAggregator(
+        partial_flush_enabled=False,
+        partial_flush_min_spans=1,
+        dd_processors=[dd_proc],
+        user_processors=[user_proc],
+    )
+    sampling_proc = aggr.sampling_processor
+    dm_writer = DummyWriter()
+    aggr.writer = dm_writer
+    # Generate a span to init _traces and _span_metrics
+    span = Span("span", on_finish=[aggr.on_span_finish])
+    aggr.on_span_start(span)
+    # Expect SpanAggregator to have the processors and span in _traces
+    assert dd_proc in aggr.dd_processors
+    assert user_proc in aggr.user_processors
+    assert span.trace_id in aggr._traces
+    assert len(aggr._span_metrics["spans_created"]) == 1
+    # Expect TraceWriter to be recreated and trace buffers to be reset but not the processors
+    aggr._reset()
+    assert dd_proc in aggr.dd_processors
+    assert user_proc in aggr.user_processors
+    assert aggr.writer is not dm_writer
+    assert sampling_proc is not aggr.sampling_processor
+    assert not aggr._traces
+    assert len(aggr._span_metrics["spans_created"]) == 0
+
+
 def test_aggregator_bad_processor():
     class Proc(TraceProcessor):
         def process_trace(self, trace):
