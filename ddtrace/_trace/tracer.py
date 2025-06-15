@@ -184,7 +184,6 @@ class Tracer(object):
             partial_flush_enabled=config._partial_flush_enabled,
             partial_flush_min_spans=config._partial_flush_min_spans,
             trace_processors=[PeerServiceProcessor(_ps_config), BaseServiceProcessor()],
-            writer=None,
         )
         if config._data_streams_enabled:
             # Inline the import to avoid pulling in ddsketch or protobuf

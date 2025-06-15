@@ -35,7 +35,6 @@ from ddtrace.internal.utils.http import verify_url
 from ddtrace.internal.writer import AgentResponse
 from ddtrace.internal.writer import AgentWriter
 from ddtrace.internal.writer import LogWriter
-from ddtrace.internal.writer import TraceWriter
 from ddtrace.settings._agent import config as agent_config
 from ddtrace.settings._config import config
 from ddtrace.settings.asm import config as asm_config
@@ -272,7 +271,6 @@ class SpanAggregator(SpanProcessor):
         partial_flush_enabled: bool,
         partial_flush_min_spans: int,
         trace_processors: Iterable[TraceProcessor],
-        writer: Optional[TraceWriter] = None,
     ):
         # Set partial flushing
         self.partial_flush_enabled = partial_flush_enabled
@@ -283,13 +281,7 @@ class SpanAggregator(SpanProcessor):
         )
         self.tags_processor = TraceTagsProcessor()
         self.trace_processors = trace_processors
-        # Initialize writer
-        if writer is not None:
-            if isinstance(writer, AgentWriter):
-                # Ensure the active writer is set to update the active sampler
-                writer._response_cb = self._agent_response_callback
-            self.writer: TraceWriter = writer
-        elif SpanAggregator._use_log_writer():
+        if SpanAggregator._use_log_writer():
             self.writer = LogWriter()
         else:
             verify_url(agent_config.trace_agent_url)
