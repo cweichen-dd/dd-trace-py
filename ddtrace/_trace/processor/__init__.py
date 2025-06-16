@@ -132,7 +132,7 @@ class TraceSamplingProcessor(TraceProcessor):
         compute_stats_enabled: bool,
         single_span_rules: List[SpanSamplingRule],
         apm_opt_out: bool,
-        agent_sampling_rules: Optional[dict] = None,
+        agent_based_samplers: Optional[dict] = None,
     ):
         super(TraceSamplingProcessor, self).__init__()
         self._compute_stats_enabled = compute_stats_enabled
@@ -146,10 +146,10 @@ class TraceSamplingProcessor(TraceProcessor):
                 rate_limit=1,
                 rate_limit_window=60e9,
                 rate_limit_always_on=True,
-                agent_sampling_rules=agent_sampling_rules,
+                agent_based_samplers=agent_based_samplers,
             )
         else:
-            self.sampler = DatadogSampler(agent_sampling_rules=agent_sampling_rules)
+            self.sampler = DatadogSampler(agent_based_samplers=agent_based_samplers)
 
     def process_trace(self, trace: List[Span]) -> Optional[List[Span]]:
         if trace:
@@ -506,7 +506,7 @@ class SpanAggregator(SpanProcessor):
             config._trace_compute_stats,
             get_span_sampling_rules(),
             asm_config._apm_opt_out,
-            self.sampling_processor.sampler._agent_sampling_rules,
+            self.sampling_processor.sampler._agent_based_samplers,
         )
         self._traces = defaultdict(lambda: _Trace())
         self._span_metrics = {
