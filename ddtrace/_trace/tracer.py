@@ -368,13 +368,6 @@ class Tracer(object):
         if compute_stats_enabled is not None:
             config._trace_compute_stats = compute_stats_enabled
 
-        if isinstance(self._span_aggregator.writer, AgentWriter):
-            if appsec_enabled:
-                self._span_aggregator.writer._api_version = "v0.4"
-
-        if trace_processors:
-            self._span_aggregator.user_processors = trace_processors
-
         if any(
             x is not None
             for x in [
@@ -384,7 +377,7 @@ class Tracer(object):
                 iast_enabled,
             ]
         ):
-            self._recreate()
+            self._recreate(trace_processors, compute_stats_enabled, appsec_enabled, reset_buffer=False)
 
         if context_provider is not None:
             self.context_provider = context_provider
@@ -412,15 +405,26 @@ class Tracer(object):
 
     def _child_after_fork(self):
         self._pid = getpid()
-        self._recreate()
+        self._recreate(reset_buffer=True)
         self._new_process = True
 
-    def _recreate(self):
+    def _recreate(
+        self,
+        trace_processors: Optional[List[TraceProcessor]] = None,
+        compute_stats_enabled: Optional[bool] = None,
+        appsec_enabled: Optional[bool] = None,
+        reset_buffer: bool = True,
+    ) -> None:
         """Re-initialize the tracer's processors and trace writer"""
         # Stop the writer.
         # This will stop the periodic thread in HTTPWriters, preventing memory leaks and unnecessary I/O.
         self.enabled = config._tracing_enabled
-        self._span_aggregator._reset()
+        self._span_aggregator._reset(
+            user_processors=trace_processors,
+            compute_stats=compute_stats_enabled,
+            appsec_enabled=appsec_enabled,
+            reset_buffer=reset_buffer,
+        )
         self._span_processors, self._appsec_processor = _default_span_processors_factory(
             self._endpoint_call_counter_span_processor,
         )

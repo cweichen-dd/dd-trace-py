@@ -493,23 +493,48 @@ class SpanAggregator(SpanProcessor):
                 )
             self._span_metrics[metric_name] = defaultdict(int)
 
-    def _reset(self):
+    def _reset(
+        self,
+        user_processors: Optional[List[TraceProcessor]] = None,
+        compute_stats: Optional[bool] = None,
+        apm_opt_out: Optional[bool] = None,
+        appsec_enabled: Optional[bool] = None,
+        reset_buffer: bool = True,
+    ) -> None:
         try:
             self.writer.stop()
         except ServiceStatusError:
             # Some writers (ex: AgentWriter), start when the first trace chunk is encoded. Stopping
             # the writer before that point will raise a ServiceStatusError.
             pass
+
+        if isinstance(self.writer, AgentWriter) and appsec_enabled:
+            # If appsec is enabled, we need to reset the API version to v0.4
+            # to ensure that the appsec meta_struct data is encoded.
+            self.writer._api_version = "v0.4"
         # Re-create the background writer thread
         self.writer = self.writer.recreate()
+        # Re-create the sampling processor with the compute_stats and apm_opt_out values
+        # Avoids overriding the agent sampling rules
+        if compute_stats is None:
+            compute_stats = self.sampling_processor._compute_stats_enabled
+        if apm_opt_out is None:
+            apm_opt_out = self.sampling_processor.apm_opt_out
         self.sampling_processor = TraceSamplingProcessor(
-            config._trace_compute_stats,
+            compute_stats,
             get_span_sampling_rules(),
-            asm_config._apm_opt_out,
+            apm_opt_out,
             self.sampling_processor.sampler._agent_based_samplers,
         )
-        self._traces = defaultdict(lambda: _Trace())
-        self._span_metrics = {
-            "spans_created": defaultdict(int),
-            "spans_finished": defaultdict(int),
-        }
+        # Override previously set user processors
+        if user_processors is not None:
+            self.user_processors = user_processors
+        # Reset the trace buffer and span metrics. This is useful when a process forks and we would like to
+        # avoid sending traces from both the parent and child processes.
+        if reset_buffer:
+            self._traces = defaultdict(lambda: _Trace())
+            self._span_metrics = {
+                "spans_created": defaultdict(int),
+                "spans_finished": defaultdict(int),
+            }
+            self._lock = RLock()

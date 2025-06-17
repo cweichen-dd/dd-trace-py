@@ -24,6 +24,7 @@ from ddtrace.internal.processor.endpoint_call_counter import EndpointCallCounter
 from ddtrace.internal.sampling import SamplingMechanism
 from ddtrace.internal.sampling import SpanSamplingRule
 from ddtrace.internal.telemetry.constants import TELEMETRY_NAMESPACE
+from ddtrace.internal.writer import AgentWriter
 from ddtrace.trace import Context
 from ddtrace.trace import Span
 from tests.utils import DummyTracer
@@ -116,7 +117,9 @@ def test_aggregator_user_processors():
 
 
 def test_aggregator_reset():
-    """Test that the aggregator can reset trace buffers, sampling processor and trace writer"""
+    """Test that on reset, the aggregator clears user processors,
+    recreates the sampling processor, trace writer, and trace buffer
+    """
 
     class DDProc(TraceProcessor):
         def process_trace(self, trace):
@@ -153,6 +156,38 @@ def test_aggregator_reset():
     assert sampling_proc is not aggr.sampling_processor
     assert not aggr._traces
     assert len(aggr._span_metrics["spans_created"]) == 0
+
+
+def test_aggregator_reset_with_args():
+    """Test that the span aggregator can reset trace buffers, sampling processor and trace api version"""
+
+    class DDProc(TraceProcessor):
+        def process_trace(self, trace):
+            return trace
+
+    class UserProc(TraceProcessor):
+        def process_trace(self, trace):
+            return trace
+
+    dd_proc = DDProc()
+    user_proc = UserProc()
+    aggr = SpanAggregator(
+        partial_flush_enabled=False,
+        partial_flush_min_spans=1,
+        dd_processors=[dd_proc],
+        user_processors=[user_proc],
+    )
+
+    aggr.writer = AgentWriter("", api_version="v0.5")
+    span = Span("span", on_finish=[aggr.on_span_finish])
+    aggr.on_span_start(span)
+    aggr._reset(user_processors=[], apm_opt_out=False, compute_stats=False, appsec_enabled=True, reset_buffer=False)
+    assert aggr.user_processors == []
+    assert aggr.sampling_processor.apm_opt_out is False
+    assert aggr.sampling_processor._compute_stats_enabled is False
+    assert aggr.writer._api_version == "v0.4"
+    assert span.trace_id in aggr._traces
+    assert len(aggr._span_metrics["spans_created"]) == 1
 
 
 def test_aggregator_bad_processor():
