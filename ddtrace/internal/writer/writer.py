@@ -288,12 +288,8 @@ class HTTPWriter(periodic.PeriodicService, TraceWriter):
             self._metrics["sent_traces"] += count
 
         if response.status not in (404, 415) and response.status >= 400:
-            msg = "failed to send traces to intake at %s: HTTP error status %s, reason %s"
-            log_args = (
-                self._intake_endpoint(client),
-                response.status,
-                response.reason,
-            )  # type: Tuple[Any, Any, Any]
+            msg = "failed to send traces to intake at %s: HTTP error status %s, reason %s, message %s"
+            log_args = (self._intake_endpoint(client), response.status, response.reason, response.body)
             # Append the payload if requested
             if config._trace_writer_log_err_payload:
                 msg += ", payload %s"
