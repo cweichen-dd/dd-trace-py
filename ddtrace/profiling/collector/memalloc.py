@@ -91,7 +91,10 @@ class MemoryCollector(collector.PeriodicCollector):
             LOG.debug("Unable to collect heap events from process %d", os.getpid(), exc_info=True)
             return tuple()
 
-        for (frames, _, thread_id), size in events:
+        for (frames, _, thread_id), size, in_use in events:
+            if not in_use:
+                continue
+                
             if not self.ignore_profiler or thread_id not in thread_id_ignore_set:
                 handle = ddup.SampleHandle()
                 handle.push_heap(size)

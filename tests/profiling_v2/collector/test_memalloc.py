@@ -194,7 +194,9 @@ class HeapInfo:
 
 def get_heap_info(heap, funcs):
     got = {}
-    for (frames, _, _), size in heap:
+    for (frames, _, _), size, in_use in heap:
+        if not in_use:
+            continue
         func = frames[0].function_name
         if func in funcs:
             v = got.get(func, HeapInfo(0, 0))

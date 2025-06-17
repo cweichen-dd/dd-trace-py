@@ -159,7 +159,7 @@ def test_heap():
     x = _allocate_1k()
     # Check that at least one sample comes from the main thread
     thread_found = False
-    for (stack, _nframe, thread_id), size in _memalloc.heap():
+    for (stack, _nframe, thread_id), size, in_use in _memalloc.heap():
         assert 0 < len(stack) <= max_nframe
         assert size > 0
         if thread_id == threading.main_thread().ident:
@@ -173,7 +173,7 @@ def test_heap():
         pytest.fail("No trace of allocation in heap")
     assert thread_found, "Main thread not found"
     y = _pre_allocate_1k()
-    for (stack, _nframe, thread_id), size in _memalloc.heap():
+    for (stack, _nframe, thread_id), size, in_use in _memalloc.heap():
         assert 0 < len(stack) <= max_nframe
         assert size > 0
         assert isinstance(thread_id, int)
@@ -185,7 +185,7 @@ def test_heap():
         pytest.fail("No trace of allocation in heap")
     del x
     gc.collect()
-    for (stack, _nframe, thread_id), size in _memalloc.heap():
+    for (stack, _nframe, thread_id), size, in_use in _memalloc.heap():
         assert 0 < len(stack) <= max_nframe
         assert size > 0
         assert isinstance(thread_id, int)
@@ -198,7 +198,7 @@ def test_heap():
             pytest.fail("Allocated memory still in heap")
     del y
     gc.collect()
-    for (stack, _nframe, thread_id), size in _memalloc.heap():
+    for (stack, _nframe, thread_id), size, in_use in _memalloc.heap():
         assert 0 < len(stack) <= max_nframe
         assert size > 0
         assert isinstance(thread_id, int)

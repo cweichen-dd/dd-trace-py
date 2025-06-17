@@ -277,6 +277,8 @@ memalloc_get_traceback(uint16_t max_nframe, void* ptr, size_t size, PyMemAllocat
     traceback->thread_id = PyThread_get_thread_ident();
 
     traceback->domain = domain;
+    
+    traceback->reported = false;
 
     return traceback;
 }

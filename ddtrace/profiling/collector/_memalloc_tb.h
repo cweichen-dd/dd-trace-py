@@ -37,6 +37,8 @@ typedef struct
     PyMemAllocatorDomain domain;
     /* Thread ID */
     unsigned long thread_id;
+    /* True if this sample has been reported previously */
+    bool reported;
     /* List of frames, top frame first */
     frame_t frames[1];
 } traceback_t;
