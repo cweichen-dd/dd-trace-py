@@ -377,7 +377,9 @@ class Tracer(object):
                 iast_enabled,
             ]
         ):
-            self._recreate(trace_processors, compute_stats_enabled, appsec_enabled, reset_buffer=False)
+            self._recreate(
+                trace_processors, compute_stats_enabled, asm_config._apm_opt_out, appsec_enabled, reset_buffer=False
+            )
 
         if context_provider is not None:
             self.context_provider = context_provider
@@ -412,6 +414,7 @@ class Tracer(object):
         self,
         trace_processors: Optional[List[TraceProcessor]] = None,
         compute_stats_enabled: Optional[bool] = None,
+        apm_opt_out: Optional[bool] = None,
         appsec_enabled: Optional[bool] = None,
         reset_buffer: bool = True,
     ) -> None:
@@ -422,6 +425,7 @@ class Tracer(object):
         self._span_aggregator._reset(
             user_processors=trace_processors,
             compute_stats=compute_stats_enabled,
+            apm_opt_out=apm_opt_out,
             appsec_enabled=appsec_enabled,
             reset_buffer=reset_buffer,
         )

@@ -32,6 +32,11 @@ from tests.utils import DummyWriter
 from tests.utils import override_global_config
 
 
+class DummyProcessor(TraceProcessor):
+    def process_trace(self, trace):
+        return trace
+
+
 def test_no_impl():
     class BadProcessor(SpanProcessor):
         pass
@@ -116,21 +121,13 @@ def test_aggregator_user_processors():
     assert span.get_tag("final_processor") == "user"
 
 
-def test_aggregator_reset():
-    """Test that on reset, the aggregator clears user processors,
-    recreates the sampling processor, trace writer, and trace buffer
+def test_aggregator_reset_default_args():
     """
-
-    class DDProc(TraceProcessor):
-        def process_trace(self, trace):
-            return trace
-
-    class UserProc(TraceProcessor):
-        def process_trace(self, trace):
-            return trace
-
-    dd_proc = DDProc()
-    user_proc = UserProc()
+    Test that on reset, the aggregator recreates the sampling processor and trace writer.
+    Processors and trace buffers should be reset not reset.
+    """
+    dd_proc = DummyProcessor()
+    user_proc = DummyProcessor()
     aggr = SpanAggregator(
         partial_flush_enabled=False,
         partial_flush_min_spans=1,
@@ -148,7 +145,7 @@ def test_aggregator_reset():
     assert user_proc in aggr.user_processors
     assert span.trace_id in aggr._traces
     assert len(aggr._span_metrics["spans_created"]) == 1
-    # Expect TraceWriter to be recreated and trace buffers to be reset but not the processors
+    # Expect TraceWriter to be recreated and trace buffers to be reset but not the trace processors
     aggr._reset()
     assert dd_proc in aggr.dd_processors
     assert user_proc in aggr.user_processors
@@ -159,18 +156,13 @@ def test_aggregator_reset():
 
 
 def test_aggregator_reset_with_args():
-    """Test that the span aggregator can reset trace buffers, sampling processor and trace api version"""
+    """
+    Validates that the span aggregator can reset trace buffers, sampling processor,
+    user processors/filters and trace api version (when ASM is enabled)
+    """
 
-    class DDProc(TraceProcessor):
-        def process_trace(self, trace):
-            return trace
-
-    class UserProc(TraceProcessor):
-        def process_trace(self, trace):
-            return trace
-
-    dd_proc = DDProc()
-    user_proc = UserProc()
+    dd_proc = DummyProcessor()
+    user_proc = DummyProcessor()
     aggr = SpanAggregator(
         partial_flush_enabled=False,
         partial_flush_min_spans=1,
@@ -181,10 +173,22 @@ def test_aggregator_reset_with_args():
     aggr.writer = AgentWriter("", api_version="v0.5")
     span = Span("span", on_finish=[aggr.on_span_finish])
     aggr.on_span_start(span)
-    aggr._reset(user_processors=[], apm_opt_out=False, compute_stats=False, appsec_enabled=True, reset_buffer=False)
-    assert aggr.user_processors == []
+
+    # Expect SpanAggregator to have the expected processors, api_version and span in _traces
+    assert dd_proc in aggr.dd_processors
+    assert user_proc in aggr.user_processors
+    assert span.trace_id in aggr._traces
+    assert len(aggr._span_metrics["spans_created"]) == 1
+    assert aggr.writer._api_version == "v0.5"
+    # Expect the default value of apm_opt_out and compute_stats to be False
     assert aggr.sampling_processor.apm_opt_out is False
     assert aggr.sampling_processor._compute_stats_enabled is False
+    # Reset the aggregator with new args and new user processors and expect the new values to be set
+    aggr._reset(user_processors=[], compute_stats=True, apm_opt_out=True, appsec_enabled=True, reset_buffer=False)
+    assert aggr.user_processors == []
+    assert dd_proc in aggr.dd_processors
+    assert aggr.sampling_processor.apm_opt_out is True
+    assert aggr.sampling_processor._compute_stats_enabled is True
     assert aggr.writer._api_version == "v0.4"
     assert span.trace_id in aggr._traces
     assert len(aggr._span_metrics["spans_created"]) == 1
