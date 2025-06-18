@@ -2,3 +2,5 @@
 fixes:
   - |
     tracing: Resolves a sampling issue where agent-based sampling rates were not correctly applied after a process forked or the tracer was reconfigured.
+  - |
+    tracing: Resolves an issue where calling `ddtrace.trace.tracer.configure(...)` could reset the trace buffer, causing spans to be dropped.
