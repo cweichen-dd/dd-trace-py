@@ -505,21 +505,28 @@ class SpanAggregator(SpanProcessor):
         appsec_enabled: Optional[bool] = None,
         reset_buffer: bool = True,
     ) -> None:
+        """
+        Resets the internal state of the SpanAggregator, including the writer, sampling processor,
+        user-defined processors, and optionally the trace buffer and span metrics.
+
+        This method is typically used after a process fork or during runtime reconfiguration.
+        Arguments that are None will not override existing values.
+        """
         try:
             self.writer.stop()
         except ServiceStatusError:
-            # Some writers (ex: AgentWriter), start when the first trace chunk is encoded. Stopping
-            # the writer before that point will raise a ServiceStatusError.
+            # Writers like AgentWriter may not start until the first trace is encoded.
+            # Stopping them before that will raise a ServiceStatusError.
             pass
 
         if isinstance(self.writer, AgentWriter) and appsec_enabled:
-            # If appsec is enabled, we need to reset the API version to v0.4
-            # to ensure that the appsec meta_struct data is encoded.
+            # Ensure AppSec metadata is encoded by setting the API version to v0.4.
             self.writer._api_version = "v0.4"
-        # Re-create the background writer thread
+        # Re-create the writer to ensure it is consistent with updated configurations (ex: api_version)
         self.writer = self.writer.recreate()
-        # Re-create the sampling processor with the compute_stats and apm_opt_out values
-        # Avoids overriding the agent sampling rules
+
+        # Recreate the sampling processor using new or existing config values.
+        # If an argument is None, the current value is preserved.
         if compute_stats is None:
             compute_stats = self.sampling_processor._compute_stats_enabled
         if apm_opt_out is None:
@@ -530,11 +537,13 @@ class SpanAggregator(SpanProcessor):
             apm_opt_out,
             self.sampling_processor.sampler._agent_based_samplers,
         )
-        # Override previously set user processors
+
+        # Update user processors if provided.
         if user_processors is not None:
             self.user_processors = user_processors
-        # Reset the trace buffer and span metrics. This is useful when a process forks and we would like to
-        # avoid sending traces from both the parent and child processes.
+
+        # Reset the trace buffer and span metrics.
+        # Useful when forking to prevent sending duplicate spans from parent and child processes.
         if reset_buffer:
             self._traces = defaultdict(lambda: _Trace())
             self._span_metrics = {
