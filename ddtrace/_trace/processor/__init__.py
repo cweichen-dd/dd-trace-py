@@ -493,7 +493,7 @@ class SpanAggregator(SpanProcessor):
                 )
             self._span_metrics[metric_name] = defaultdict(int)
 
-    def _reset(
+    def reset(
         self,
         user_processors: Optional[List[TraceProcessor]] = None,
         compute_stats: Optional[bool] = None,

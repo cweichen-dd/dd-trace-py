@@ -146,7 +146,7 @@ def test_aggregator_reset_default_args():
     assert span.trace_id in aggr._traces
     assert len(aggr._span_metrics["spans_created"]) == 1
     # Expect TraceWriter to be recreated and trace buffers to be reset but not the trace processors
-    aggr._reset()
+    aggr.reset()
     assert dd_proc in aggr.dd_processors
     assert user_proc in aggr.user_processors
     assert aggr.writer is not dm_writer
@@ -184,7 +184,7 @@ def test_aggregator_reset_with_args():
     assert aggr.sampling_processor.apm_opt_out is False
     assert aggr.sampling_processor._compute_stats_enabled is False
     # Reset the aggregator with new args and new user processors and expect the new values to be set
-    aggr._reset(user_processors=[], compute_stats=True, apm_opt_out=True, appsec_enabled=True, reset_buffer=False)
+    aggr.reset(user_processors=[], compute_stats=True, apm_opt_out=True, appsec_enabled=True, reset_buffer=False)
     assert aggr.user_processors == []
     assert dd_proc in aggr.dd_processors
     assert aggr.sampling_processor.apm_opt_out is True
