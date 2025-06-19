@@ -48,7 +48,7 @@ class Constant_Class(type):
 class APPSEC(metaclass=Constant_Class):
     """Specific constants for AppSec"""
 
-    ENV: Literal["DD_APPSEC_ENABLED"] = "DD_APPSEC_ENABLED"
+    ENV: Literal["DD_APPSEC_ENABLED"] = "DD_MY_APPSEC_ENABLED"
     APM_TRACING_ENV: Literal["DD_APM_TRACING_ENABLED"] = "DD_APM_TRACING_ENABLED"
     RULE_FILE: Literal["DD_APPSEC_RULES"] = "DD_APPSEC_RULES"
     ENABLED: Literal["_dd.appsec.enabled"] = "_dd.appsec.enabled"
