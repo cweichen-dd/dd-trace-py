@@ -85,7 +85,7 @@ def test_standard_tags():
     assert f.get("log_injection_enabled") == "structured"
     assert f.get("health_metrics_enabled") is False
     assert f.get("runtime_metrics_enabled") is False
-    assert f.get("sampler_rules") == []
+    assert f.get("sampling_rules") == []
     assert f.get("global_tags") == ""
     assert f.get("tracer_tags") == ""
 
@@ -133,7 +133,7 @@ class TestGlobalConfig(SubprocessTestCase):
         assert f.get("service") == "service"
         assert f.get("global_tags") == "k1:v1,k2:v2"
         assert f.get("tracer_tags") in ["k1:v1,k2:v2", "k2:v2,k1:v1"]
-        assert f.get("tracer_enabled") is True
+        assert f.get("ddtrace_enabled") is True
 
         icfg = f.get("integrations", {})
         assert "django" not in icfg
@@ -159,8 +159,10 @@ class TestGlobalConfig(SubprocessTestCase):
             # shove an unserializable object into the config log output
             # regression: this used to cause an exception to be raised
             ddtrace.config.version = AgentWriter(agent_url="foobar")
-            ddtrace.trace.tracer.configure()
-        assert mock.call(logging.INFO, re_matcher("- DATADOG TRACER CONFIGURATION - ")) in mock_logger.mock_calls
+            ddtrace.trace.tracer._generate_diagnostic_logs()
+        assert (
+            mock.call(logging.INFO, re_matcher("- DATADOG TRACER CONFIGURATION - ")) in mock_logger.mock_calls
+        ), mock_logger.mock_calls
 
     @run_in_subprocess(
         env_overrides=dict(
@@ -171,7 +173,7 @@ class TestGlobalConfig(SubprocessTestCase):
     def test_tracer_loglevel_info_no_connection(self):
         logging.basicConfig(level=logging.INFO)
         with mock.patch.object(logging.Logger, "log") as mock_logger:
-            ddtrace.trace.tracer.configure()
+            ddtrace.trace.tracer._generate_diagnostic_logs()
         assert mock.call(logging.INFO, re_matcher("- DATADOG TRACER CONFIGURATION - ")) in mock_logger.mock_calls
         assert mock.call(logging.WARNING, re_matcher("- DATADOG TRACER DIAGNOSTIC - ")) in mock_logger.mock_calls
 
@@ -292,7 +294,7 @@ def test_startup_logs_sampling_rules():
 
     f = debug.collect(tracer)
 
-    assert f.get("sampler_rules") == [
+    assert f.get("sampling_rules") == [
         "SamplingRule(sample_rate=1.0, service='NO_RULE', name='NO_RULE', resource='NO_RULE',"
         " tags='NO_RULE', provenance='default')"
     ]

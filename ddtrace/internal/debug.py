@@ -9,8 +9,11 @@ from typing import Dict  # noqa:F401
 from typing import Union  # noqa:F401
 
 import ddtrace
+import ddtrace.internal
 from ddtrace.internal import gitmetadata
 from ddtrace.internal.packages import get_distributions
+import ddtrace.internal.runtime
+import ddtrace.internal.runtime.runtime_metrics
 from ddtrace.internal.utils.cache import callonce
 from ddtrace.internal.writer import AgentWriter
 from ddtrace.internal.writer import LogWriter
@@ -132,7 +135,7 @@ def collect(tracer):
         enabled_cli="ddtrace" in os.getenv("PYTHONPATH", ""),
         log_injection_enabled=ddtrace.config._logs_injection,
         health_metrics_enabled=ddtrace.config._health_metrics_enabled,
-        runtime_metrics_enabled=ddtrace.config._runtime_metrics_enabled,
+        runtime_metrics_enabled=ddtrace.internal.runtime.runtime_metrics.RuntimeWorker.enabled,
         dd_version=ddtrace.config.version or "",
         global_tags=tags_to_str(ddtrace.config.tags),
         tracer_tags=tags_to_str(tracer._tags),

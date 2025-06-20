@@ -572,6 +572,7 @@ def test_writer_flush_queue_generates_debug_log():
     from ddtrace.internal.writer import AgentWriter
     from ddtrace.settings._agent import config as agent_config
     from tests.utils import AnyFloat
+    from tests.utils import AnyInt
     from tests.utils import AnyStr
 
     encoding = os.environ["DD_TRACE_API_VERSION"]
@@ -583,7 +584,9 @@ def test_writer_flush_queue_generates_debug_log():
         calls = [
             mock.call(
                 logging.DEBUG,
-                "sent %s in %.5fs to %s",
+                "Got response: %d %s sent %s in %.5fs to %s",
+                AnyInt(),
+                AnyStr(),
                 AnyStr(),
                 AnyFloat(),
                 "{}/{}/traces".format(writer.agent_url, encoding),

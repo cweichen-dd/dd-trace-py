@@ -256,7 +256,7 @@ class HTTPWriter(periodic.PeriodicService, TraceWriter):
                     log_level = logging.DEBUG
                 log.log(
                     log_level,
-                    "Got response: %s %s sent %s in %.5fs to %s",
+                    "Got response: %d %s sent %s in %.5fs to %s",
                     resp.status,
                     resp.reason,
                     _human_size(len(data)),
