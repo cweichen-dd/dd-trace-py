@@ -1,4 +1,4 @@
-
+import json
 from typing import Any
 from typing import Dict
 from typing import List
@@ -217,7 +217,7 @@ def _load_span_sampling_json(raw_json_rules: str) -> List[Dict[str, Any]]:
         if not isinstance(json_rules, list):
             log.warning("DD_SPAN_SAMPLING_RULES is not list, got %r", json_rules)
             return []
-    except JSONDecodeError:
+    except json.JSONDecodeError:
         log.warning("Unable to parse DD_SPAN_SAMPLING_RULES=%r", raw_json_rules)
         return []
 
