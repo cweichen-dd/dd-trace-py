@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 import platform
 import sys
@@ -127,7 +128,7 @@ def collect(tracer):
         ddtrace_enabled=ddtrace.config._tracing_enabled,
         sampling_rules=sampling_rules,
         service=ddtrace.config.service or "",
-        debug=log.isEnabledFor(logging.DEBUG),
+        debug=logger.isEnabledFor(logging.DEBUG),
         enabled_cli="ddtrace" in os.getenv("PYTHONPATH", ""),
         log_injection_enabled=ddtrace.config._logs_injection,
         health_metrics_enabled=ddtrace.config._health_metrics_enabled,
