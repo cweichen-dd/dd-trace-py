@@ -792,6 +792,7 @@ class NativeWriter(periodic.PeriodicService, TraceWriter):
                 client.ENDPOINT,
                 response.status,
             )
+            self.recreate()
         else:
             log.error(
                 "unsupported endpoint '%s': received response %s from intake (%s)",
