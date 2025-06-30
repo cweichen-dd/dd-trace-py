@@ -572,7 +572,7 @@ class DummyWriter(DummyWriterMixin, NativeWriter):
     def __init__(self, *args, **kwargs):
         # original call
         if len(args) == 0 and "agent_url" not in kwargs:
-            kwargs["agent_url"] = agent_config.trace_agent_url
+            kwargs["intake_url"] = agent_config.trace_agent_url
         kwargs["api_version"] = kwargs.get("api_version", "v0.5")
 
         # only flush traces to test agent if ``trace_flush_enabled`` is explicitly set to True
@@ -638,7 +638,7 @@ class DummyTracer(Tracer):
     @property
     def agent_url(self):
         # type: () -> str
-        return self._span_aggregator.writer.agent_url
+        return self._span_aggregator.writer.intake_url
 
     @property
     def encoder(self):
@@ -1063,7 +1063,7 @@ def snapshot_context(
     if not tracer:
         tracer = ddtrace.tracer
 
-    parsed = parse.urlparse(tracer._span_aggregator.writer.agent_url)
+    parsed = parse.urlparse(tracer._span_aggregator.writer.intake_url)
     conn = httplib.HTTPConnection(parsed.hostname, parsed.port)
     try:
         # clear queue in case traces have been generated before test case is

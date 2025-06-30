@@ -61,7 +61,7 @@ def collect(tracer):
         tracer._span_aggregator.writer, NativeWriter
     ):
         writer = tracer._span_aggregator.writer
-        agent_url = writer.agent_url
+        agent_url = writer.intake_url
         try:
             writer.write([])
             writer.flush_queue(raise_exc=True)

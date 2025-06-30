@@ -450,7 +450,7 @@ class AgentWriter(HTTPWriter):
 
     def __init__(
         self,
-        agent_url: str,
+        intake_url: str,
         processing_interval: Optional[float] = None,
         # Match the payload size since there is no functionality
         # to flush dynamically.
@@ -530,7 +530,7 @@ class AgentWriter(HTTPWriter):
         self._response_cb = response_callback
         self._report_metrics = report_metrics
         super(AgentWriter, self).__init__(
-            intake_url=agent_url,
+            intake_url=intake_url,
             clients=[client],
             processing_interval=processing_interval,
             buffer_size=buffer_size,
@@ -545,7 +545,7 @@ class AgentWriter(HTTPWriter):
 
     def recreate(self) -> HTTPWriter:
         new_instance = self.__class__(
-            agent_url=self.agent_url,
+            intake_url=self.intake_url,
             processing_interval=self._interval,
             buffer_size=self._buffer_size,
             max_payload_size=self._max_payload_size,
@@ -558,10 +558,6 @@ class AgentWriter(HTTPWriter):
             response_callback=self._response_cb,
         )
         return new_instance
-
-    @property
-    def agent_url(self):
-        return self.intake_url
 
     @property
     def _agent_endpoint(self):
@@ -631,7 +627,7 @@ class NativeWriter(periodic.PeriodicService, TraceWriter):
 
     def __init__(
         self,
-        agent_url: str,
+        intake_url: str,
         processing_interval: Optional[float] = None,
         # Match the payload size since there is no functionality
         # to flush dynamically.
@@ -705,7 +701,7 @@ class NativeWriter(periodic.PeriodicService, TraceWriter):
                 test_session_token = additional_header["X-Datadog-Test-Session-Token"]
 
         super(NativeWriter, self).__init__(interval=processing_interval)
-        self.agent_url = agent_url
+        self.intake_url = intake_url
         self._buffer_size = buffer_size
         self._max_payload_size = max_payload_size
         self._timeout = timeout
@@ -736,7 +732,7 @@ class NativeWriter(periodic.PeriodicService, TraceWriter):
 
         builder = (
             native.TraceExporterBuilder()
-            .set_url(self.agent_url)
+            .set_url(self.intake_url)
             .set_language("python")
             .set_language_version(compat.PYTHON_VERSION)
             .set_language_interpreter(compat.PYTHON_INTERPRETER)
@@ -767,7 +763,7 @@ class NativeWriter(periodic.PeriodicService, TraceWriter):
     def recreate(self):
         self._exporter.stop_worker()
         return self.__class__(
-            agent_url=self.agent_url,
+            intake_url=self.intake_url,
             processing_interval=self._interval,
             compute_stats_enabled=self._compute_stats_enabled,
             buffer_size=self._buffer_size,
@@ -802,12 +798,12 @@ class NativeWriter(periodic.PeriodicService, TraceWriter):
                 "unsupported endpoint '%s': received response %s from intake (%s)",
                 client.ENDPOINT,
                 response.status,
-                self.agent_url,
+                self.intake_url,
             )
 
     # NOTE: Only used for logging
     def _intake_endpoint(self, client=None):
-        return "{}/{}".format(self.agent_url, client.ENDPOINT if client else self._endpoint)
+        return "{}/{}".format(self.intake_url, client.ENDPOINT if client else self._endpoint)
 
     # NOTE: Only used for logging
     @property

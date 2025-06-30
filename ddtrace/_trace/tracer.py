@@ -750,7 +750,7 @@ class Tracer(object):
     def agent_trace_url(self) -> Optional[str]:
         """Trace agent url"""
         if isinstance(self._span_aggregator.writer, NativeWriter):
-            return self._span_aggregator.writer.agent_url
+            return self._span_aggregator.writer.intake_url
 
         return None
 

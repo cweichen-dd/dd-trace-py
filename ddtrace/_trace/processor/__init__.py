@@ -278,7 +278,7 @@ class SpanAggregator(SpanProcessor):
         else:
             verify_url(agent_config.trace_agent_url)
             self.writer = NativeWriter(
-                agent_url=agent_config.trace_agent_url,
+                intake_url=agent_config.trace_agent_url,
                 dogstatsd=get_dogstatsd_client(agent_config.dogstatsd_url),
                 sync_mode=SpanAggregator._use_sync_mode(),
                 compute_stats_enabled=config._trace_compute_stats,
