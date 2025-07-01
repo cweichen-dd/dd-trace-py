@@ -295,15 +295,6 @@ memalloc_get_traceback(uint16_t max_nframe, void* ptr, size_t size, PyMemAllocat
 PyObject*
 traceback_to_tuple(traceback_t* tb)
 {
-    if (tb == NULL) {
-        PyObject* empty_stack = PyTuple_New(0);
-        PyObject* tuple = PyTuple_New(3);
-        PyTuple_SET_ITEM(tuple, 0, empty_stack);
-        PyTuple_SET_ITEM(tuple, 1, PyLong_FromUnsignedLong(0));
-        PyTuple_SET_ITEM(tuple, 2, PyLong_FromUnsignedLong(0));
-        return tuple;
-    }
-    
     /* Convert stack into a tuple of tuple */
     PyObject* stack = PyTuple_New(tb->nframe);
 

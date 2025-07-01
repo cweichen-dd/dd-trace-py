@@ -386,10 +386,6 @@ memalloc_heap(void)
                 break;
             }
             
-            if (tb == NULL) {
-                continue;
-            }
-            
             PyObject* tb_and_info = PyTuple_New(4);
             if (tb_and_info == NULL) {
                 continue;
@@ -418,10 +414,6 @@ memalloc_heap(void)
         }
         
         traceback_t* tb = global_heap_tracker.allocation_list.tab[i];
-        
-        if (tb == NULL) {
-            continue;
-        }
         
         PyObject* tb_and_info = PyTuple_New(4);
         if (tb_and_info == NULL) {
