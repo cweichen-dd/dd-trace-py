@@ -33,8 +33,8 @@ from ddtrace.internal.telemetry.constants import TELEMETRY_NAMESPACE
 from ddtrace.internal.utils.http import verify_url
 from ddtrace.internal.writer import AgentResponse
 from ddtrace.internal.writer import LogWriter
-from ddtrace.internal.writer import TraceWriter
 from ddtrace.internal.writer import NativeWriter
+from ddtrace.internal.writer import TraceWriter
 from ddtrace.settings._agent import config as agent_config
 from ddtrace.settings._config import config
 from ddtrace.settings.asm import config as asm_config
