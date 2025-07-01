@@ -58,10 +58,13 @@ def test_memory_collector(tmp_path):
     )
     ddup.start()
 
-    mc = memalloc.MemoryCollector()
+    mc = memalloc.MemoryCollector(heap_sample_size=256)
     with mc:
-        _allocate_1k()
+        junk = _allocate_1k()
+        del junk
         mc.periodic()
+        samples = mc.snapshot()
+        assert len(samples) > 0, "No samples collected by profiler"
 
     ddup.upload()
 
@@ -194,7 +197,7 @@ class HeapInfo:
 
 def get_heap_info(heap, funcs):
     got = {}
-    for (frames, _, _), size, in_use in heap:
+    for (frames, _, _), size, in_use, count in heap:
         if not in_use:
             continue
         func = frames[0].function_name
@@ -223,8 +226,36 @@ def get_tracemalloc_stats_per_func(stats, funcs):
     return actual_sizes
 
 
-# TODO: higher sampling intervals have a lot more variance and are flaky
-# but would be nice to test since our default is 1MiB
+def test_unified_profiler_allocation_samples():
+    mc = memalloc.MemoryCollector(heap_sample_size=512)
+    
+    with mc:
+        allocations = []
+        for i in range(100):
+            allocations.append(one(256))
+            allocations.append(two(512))
+        
+        del allocations
+        
+        samples = mc.snapshot()
+    
+    assert len(samples) > 0, "Should have captured some samples"
+    
+    allocation_samples = [s for s in samples if not s[2]]  # s[2] is in_use
+    heap_samples = [s for s in samples if s[2]]  # s[2] is in_use
+    
+    print(f"Total samples: {len(samples)}")
+    print(f"Allocation samples (in_use=False): {len(allocation_samples)}")
+    print(f"Heap samples (in_use=True): {len(heap_samples)}")
+    
+    assert len(allocation_samples) > 0, "Should have captured allocation samples after deletion"
+    
+    for size, count, in_use in samples:
+        assert isinstance(size, int) and size > 0, f"Invalid size: {size}"
+        assert isinstance(count, int) and count > 0, f"Invalid count: {count}"
+        assert isinstance(in_use, bool), f"Invalid in_use: {in_use}"
+
+
 @pytest.mark.parametrize("sample_interval", (8, 512, 1024))
 def test_heap_profiler_sampling_accuracy(sample_interval):
     # tracemalloc lets us get ground truth on how many allocations there were
@@ -374,3 +405,67 @@ def test_memealloc_data_race_regression():
     ev.set()
     for t in threads:
         t.join()
+
+
+@pytest.mark.parametrize("sample_interval", (256, 512, 1024))
+def test_unified_profiler_allocation_sampling_accuracy(sample_interval):
+    import os
+    
+    mc = memalloc.MemoryCollector(heap_sample_size=sample_interval)
+    
+    old = os.environ.get("_DD_MEMALLOC_DEBUG_RNG_SEED")
+    os.environ["_DD_MEMALLOC_DEBUG_RNG_SEED"] = "42"
+    
+    try:
+        with mc:
+            junk = []
+            for i in range(100):
+                size = 256
+                junk.append(one(size))
+                junk.append(two(2 * size))
+                junk.append(three(3 * size))
+                junk.append(four(4 * size))
+
+            del junk
+            
+            samples = mc.snapshot()
+    
+    finally:
+        if old is not None:
+            os.environ["_DD_MEMALLOC_DEBUG_RNG_SEED"] = old
+        else:
+            if "_DD_MEMALLOC_DEBUG_RNG_SEED" in os.environ:
+                del os.environ["_DD_MEMALLOC_DEBUG_RNG_SEED"]
+
+    allocation_samples = [s for s in samples if not s[2]]  # s[2] is in_use
+    heap_samples = [s for s in samples if s[2]]  # s[2] is in_use
+    
+    print(f"Total samples: {len(samples)}")
+    print(f"Allocation samples (in_use=False): {len(allocation_samples)}")
+    print(f"Heap samples (in_use=True): {len(heap_samples)}")
+    
+    assert len(allocation_samples) > 0, "Should have captured allocation samples after deletion"
+    
+    total_allocation_size = 0
+    total_allocation_count = 0
+    for size, count, in_use in allocation_samples:
+        assert isinstance(size, int) and size > 0, f"Invalid allocation sample size: {size}"
+        assert isinstance(count, int) and count > 0, f"Invalid allocation sample count: {count}"
+        assert not in_use, f"Allocation sample should have in_use=False, got: {in_use}"
+        total_allocation_size += size
+        total_allocation_count += count
+
+    avg_allocation_size = total_allocation_size // total_allocation_count if total_allocation_count > 0 else 0
+    
+    print(f"Total allocation size: {total_allocation_size}")
+    print(f"Total allocation count: {total_allocation_count}")
+    print(f"Average allocation size: {avg_allocation_size}")
+    
+    assert avg_allocation_size >= 100, f"Average allocation size too small: {avg_allocation_size}"
+    assert avg_allocation_size <= 2000, f"Average allocation size too large: {avg_allocation_size}"
+    
+    assert total_allocation_count >= 1, f"Should have captured at least 1 allocation sample"
+    
+    print(f"Successfully validated unified profiler allocation sampling for sample_interval={sample_interval}")
+    print(f"Captured {len(allocation_samples)} allocation samples representing {total_allocation_count} allocations")
+

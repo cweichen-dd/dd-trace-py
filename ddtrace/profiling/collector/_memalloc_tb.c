@@ -160,7 +160,6 @@ traceback_free(traceback_t* tb)
         Py_DECREF(tb->frames[nframe].filename);
         Py_DECREF(tb->frames[nframe].name);
     }
-    memalloc_debug_gil_release();
     PyMem_RawFree(tb);
 }
 
@@ -250,7 +249,7 @@ memalloc_frame_to_traceback(PyFrameObject* pyframe, uint16_t max_nframe)
 }
 
 traceback_t*
-memalloc_get_traceback(uint16_t max_nframe, void* ptr, size_t size, PyMemAllocatorDomain domain)
+memalloc_get_traceback(uint16_t max_nframe, void* ptr, size_t size, PyMemAllocatorDomain domain, size_t allocated_memory)
 {
     PyThreadState* tstate = PyThreadState_Get();
 
@@ -271,7 +270,7 @@ memalloc_get_traceback(uint16_t max_nframe, void* ptr, size_t size, PyMemAllocat
     if (traceback == NULL)
         return NULL;
 
-    traceback->size = size;
+    traceback->size = allocated_memory;
     traceback->ptr = ptr;
 
     traceback->thread_id = PyThread_get_thread_ident();
@@ -280,12 +279,31 @@ memalloc_get_traceback(uint16_t max_nframe, void* ptr, size_t size, PyMemAllocat
     
     traceback->reported = false;
 
+    if (size > 0) {
+        double scaled_count = ((double)allocated_memory) / ((double)size);
+        traceback->count = (size_t)scaled_count;
+        if (traceback->count == 0) {
+            traceback->count = 1;
+        }
+    } else {
+        traceback->count = 1;
+    }
+
     return traceback;
 }
 
 PyObject*
 traceback_to_tuple(traceback_t* tb)
 {
+    if (tb == NULL) {
+        PyObject* empty_stack = PyTuple_New(0);
+        PyObject* tuple = PyTuple_New(3);
+        PyTuple_SET_ITEM(tuple, 0, empty_stack);
+        PyTuple_SET_ITEM(tuple, 1, PyLong_FromUnsignedLong(0));
+        PyTuple_SET_ITEM(tuple, 2, PyLong_FromUnsignedLong(0));
+        return tuple;
+    }
+    
     /* Convert stack into a tuple of tuple */
     PyObject* stack = PyTuple_New(tb->nframe);
 

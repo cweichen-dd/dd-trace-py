@@ -338,7 +338,7 @@ memalloc_heap_track(uint16_t max_nframe, void* ptr, size_t size, PyMemAllocatorD
        will tend to be larger for large allocations and smaller for small
        allocations, and close to the average sampling interval so that the sum
        of sample live allocations stays close to the actual heap size */
-    traceback_t* tb = memalloc_get_traceback(max_nframe, ptr, global_heap_tracker.allocated_memory, domain);
+    traceback_t* tb = memalloc_get_traceback(max_nframe, ptr, size, domain, global_heap_tracker.allocated_memory);
     if (!tb) {
         memalloc_yield_guard();
         return;
@@ -382,20 +382,30 @@ memalloc_heap(void)
         traceback_t* tb;
         
         while (memalloc_heap_map_iter_next(it, &key, &tb)) {
-            /* Create tuple with traceback, size, and in_use flag */
-            PyObject* tb_and_info = PyTuple_New(3);
+            if (list_index >= total_count) {
+                break;
+            }
+            
+            if (tb == NULL) {
+                continue;
+            }
+            
+            PyObject* tb_and_info = PyTuple_New(4);
+            if (tb_and_info == NULL) {
+                continue;
+            }
+            
             PyTuple_SET_ITEM(tb_and_info, 0, traceback_to_tuple(tb));
             PyTuple_SET_ITEM(tb_and_info, 1, PyLong_FromSize_t(tb->size));
             PyTuple_SET_ITEM(tb_and_info, 2, Py_True); /* in_use = True for live samples */
             Py_INCREF(Py_True);
+            PyTuple_SET_ITEM(tb_and_info, 3, PyLong_FromSize_t(tb->count));
             
             PyList_SET_ITEM(heap_list, list_index, tb_and_info);
             list_index++;
             
             /* Mark as reported */
             tb->reported = true;
-            
-            memalloc_debug_gil_release();
         }
         
         memalloc_heap_map_iter_delete(it);
@@ -403,24 +413,42 @@ memalloc_heap(void)
     
     /* Second, iterate over freed samples from allocation_list */
     for (size_t i = 0; i < global_heap_tracker.allocation_list.count; i++) {
+        if (list_index >= total_count) {
+            break;
+        }
+        
         traceback_t* tb = global_heap_tracker.allocation_list.tab[i];
         
-        /* Create tuple with traceback, size, and in_use flag */
-        PyObject* tb_and_info = PyTuple_New(3);
+        if (tb == NULL) {
+            continue;
+        }
+        
+        PyObject* tb_and_info = PyTuple_New(4);
+        if (tb_and_info == NULL) {
+            continue;
+        }
+        
         PyTuple_SET_ITEM(tb_and_info, 0, traceback_to_tuple(tb));
         PyTuple_SET_ITEM(tb_and_info, 1, PyLong_FromSize_t(tb->size));
         PyTuple_SET_ITEM(tb_and_info, 2, Py_False); /* in_use = False for freed samples */
         Py_INCREF(Py_False);
+        PyTuple_SET_ITEM(tb_and_info, 3, PyLong_FromSize_t(tb->count));
         
         PyList_SET_ITEM(heap_list, list_index, tb_and_info);
         list_index++;
-        
-        memalloc_debug_gil_release();
+    }
+    
+    if (list_index < total_count) {
+        if (PyList_SetSlice(heap_list, list_index, total_count, NULL) < 0) {
+            PyErr_Clear();
+        }
     }
     
     /* Free all tracebacks in allocation_list after reporting them */
     for (size_t i = 0; i < global_heap_tracker.allocation_list.count; i++) {
-        traceback_free(global_heap_tracker.allocation_list.tab[i]);
+        if (global_heap_tracker.allocation_list.tab[i] != NULL) {
+            traceback_free(global_heap_tracker.allocation_list.tab[i]);
+        }
     }
     /* Reset the count to 0 so we can reuse the memory */
     global_heap_tracker.allocation_list.count = 0;
