@@ -26,7 +26,7 @@ from ddtrace.internal.writer import AgentWriter
 from ddtrace.internal.writer import LogWriter
 from ddtrace.internal.writer import Response
 from ddtrace.internal.writer import _human_size
-from ddtrace.internal.writer.writer import NativeWriter
+from ddtrace.internal.writer import NativeWriter
 from ddtrace.trace import Span
 from tests.utils import AnyInt
 from tests.utils import BaseTestCase
