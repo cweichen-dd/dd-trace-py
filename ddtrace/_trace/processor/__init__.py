@@ -508,7 +508,7 @@ class SpanAggregator(SpanProcessor):
             # Stopping them before that will raise a ServiceStatusError.
             pass
 
-        if isinstance(self.writer, AgentWriter) and appsec_enabled:
+        if isinstance(self.writer, NativeWriter) and appsec_enabled:
             # Ensure AppSec metadata is encoded by setting the API version to v0.4.
             self.writer._api_version = "v0.4"
         # Re-create the writer to ensure it is consistent with updated configurations (ex: api_version)
