@@ -15,6 +15,7 @@ from typing import List  # noqa:F401
 from urllib import parse
 import urllib.parse
 
+from ddtrace.internal.writer.writer import AgentWriterInterface
 import pytest
 import wrapt
 
@@ -37,6 +38,8 @@ from ddtrace.internal.remoteconfig import Payload
 from ddtrace.internal.schema import SCHEMA_VERSION
 from ddtrace.internal.utils.formats import asbool
 from ddtrace.internal.utils.formats import parse_tags_str
+from ddtrace.internal.writer import AgentWriter
+from ddtrace.internal.writer import AgentWriterInterface
 from ddtrace.internal.writer import NativeWriter
 from ddtrace.internal.writer.writer import AgentWriter
 from ddtrace.propagation._database_monitoring import listen as dbm_config_listen
@@ -567,12 +570,12 @@ class DummyWriterMixin:
         return traces
 
 
-class DummyWriter(DummyWriterMixin, NativeWriter):
+class DummyWriter(DummyWriterMixin, AgentWriterInterface):
     """DummyWriter is a small fake writer used for tests. not thread-safe."""
 
     def __init__(self, *args, **kwargs):
         # original call
-        if len(args) == 0 and "agent_url" not in kwargs:
+        if len(args) == 0 and "intake_url" not in kwargs:
             kwargs["intake_url"] = agent_config.trace_agent_url
         kwargs["api_version"] = kwargs.get("api_version", "v0.5")
 
@@ -582,7 +585,11 @@ class DummyWriter(DummyWriterMixin, NativeWriter):
         # DEV: We don't want to do anything with the response callback
         # so we set it to a no-op lambda function
         kwargs["response_callback"] = lambda *args, **kwargs: None
-        NativeWriter.__init__(self, *args, **kwargs)
+        if dd_config._trace_writer_native:
+            self._inner_writer = NativeWriter(*args, **kwargs)
+        else:
+            self.inner_writer = AgentWriter(*args, **kwargs)
+
         DummyWriterMixin.__init__(self, *args, **kwargs)
         self.json_encoder = JSONEncoder()
         self.msgpack_encoder = Encoder(4 << 20, 4 << 20)
@@ -593,7 +600,7 @@ class DummyWriter(DummyWriterMixin, NativeWriter):
             traces = [spans]
             self.json_encoder.encode_traces(traces)
             if self._trace_flush_enabled:
-                NativeWriter.write(self, spans=spans)
+                self.inner_writer.write(spans=spans)
             else:
                 self.msgpack_encoder.put(spans)
                 self.msgpack_encoder.encode()
@@ -606,6 +613,18 @@ class DummyWriter(DummyWriterMixin, NativeWriter):
 
     def recreate(self):
         return self.__class__(trace_flush_enabled=self._trace_flush_enabled)
+
+    def flush_queue(self) -> None:
+        return self.inner_writer.flush_queue()
+
+    def before_fork(self) -> None:
+        return self.inner_writer.before_fork()
+
+    def set_test_session_token(self, token) -> None:
+        return self.inner_writer.set_test_session_token(token)
+    
+    def __getattr__(self, name):
+        return self.inner_writer.__getattribute__(name)
 
 
 class DummyCIVisibilityWriter(DummyWriterMixin, CIVisibilityWriter):
@@ -1075,7 +1094,7 @@ def snapshot_context(
             pytest.fail("Could not flush the queue before test case: %s" % str(e), pytrace=True)
 
         if async_mode:
-            if isinstance(tracer._span_aggregator.writer, NativeWriter):
+            if isinstance(tracer._span_aggregator.writer, AgentWriterInterface):
                 tracer._span_aggregator.writer.set_test_session_token(token)
             else:
                 # Patch the tracer writer to include the test token header for all requests.
@@ -1119,7 +1138,7 @@ def snapshot_context(
             # Force a flush so all traces are submitted.
             tracer._span_aggregator.writer.flush_queue()
             if async_mode:
-                if isinstance(tracer._span_aggregator.writer, NativeWriter):
+                if isinstance(tracer._span_aggregator.writer, AgentWriterInterface):
                     tracer._span_aggregator.writer.set_test_session_token(None)
                 else:
                     del tracer._span_aggregator.writer._headers["X-Datadog-Test-Session-Token"]

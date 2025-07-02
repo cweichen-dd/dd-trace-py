@@ -56,7 +56,7 @@ from ddtrace.internal.schema.processor import BaseServiceProcessor
 from ddtrace.internal.utils import _get_metas_to_propagate
 from ddtrace.internal.utils.formats import format_trace_id
 from ddtrace.internal.writer import HTTPWriter
-from ddtrace.internal.writer import NativeWriter
+from ddtrace.internal.writer import AgentWriterInterface
 from ddtrace.settings._config import config
 from ddtrace.settings.asm import config as asm_config
 from ddtrace.settings.peer_service import _ps_config
@@ -122,6 +122,15 @@ def _default_span_processors_factory(
         from ddtrace.appsec._iast.processor import AppSecIastSpanProcessor
 
         span_processors.append(AppSecIastSpanProcessor())
+
+    if config._trace_compute_stats and not config._trace_writer_native:
+        # Inline the import to avoid pulling in ddsketch or protobuf
+        # when importing ddtrace.
+        from ddtrace.internal.processor.stats import SpanStatsProcessorV06
+
+        span_processors.append(
+            SpanStatsProcessorV06(),
+        )
 
     span_processors.append(profiling_span_processor)
 
@@ -259,8 +268,8 @@ class Tracer(object):
         self._sampler.sample(span)
 
     def _sample_before_fork(self) -> None:
-        if isinstance(self._span_aggregator.writer, NativeWriter):
-            self._span_aggregator.writer._exporter.stop_worker()
+        if isinstance(self._span_aggregator.writer, AgentWriterInterface):
+            self._span_aggregator.writer.before_fork()
         span = self.current_root_span()
         if span is not None and span.context.sampling_priority is None:
             self.sample(span)
@@ -363,7 +372,7 @@ class Tracer(object):
         if compute_stats_enabled is not None:
             config._trace_compute_stats = compute_stats_enabled
 
-        if isinstance(self._span_aggregator.writer, NativeWriter):
+        if isinstance(self._span_aggregator.writer, AgentWriterInterface):
             if appsec_enabled:
                 self._span_aggregator.writer._api_version = "v0.4"
 
@@ -413,7 +422,7 @@ class Tracer(object):
         self._new_process = True
 
     def _parent_after_fork(self):
-        if isinstance(self._span_aggregator.writer, NativeWriter):
+        if isinstance(self._span_aggregator.writer, AgentWriterInterface):
             pass
             # self._writer.start_worker_thread()
 
@@ -748,7 +757,7 @@ class Tracer(object):
     @property
     def agent_trace_url(self) -> Optional[str]:
         """Trace agent url"""
-        if isinstance(self._span_aggregator.writer, NativeWriter):
+        if isinstance(self._span_aggregator.writer, AgentWriterInterface):
             return self._span_aggregator.writer.intake_url
 
         return None

@@ -98,7 +98,7 @@ def test_uds_wrong_socket_path():
 
     import mock
 
-    from ddtrace.internal.writer import NativeWriter
+    from ddtrace import config
     from ddtrace.trace import tracer as t
 
     encoding = os.environ["DD_TRACE_API_VERSION"]
@@ -106,8 +106,7 @@ def test_uds_wrong_socket_path():
         t.trace("client.testing").finish()
         t.shutdown()
 
-    # TODO: Use proper feature flag
-    if isinstance(t._span_aggregator.writer, NativeWriter):
+    if config._trace_writer_native:
         calls = [
             mock.call(
                 "failed to send, dropping %d traces to intake at %s: %s",
@@ -209,7 +208,7 @@ def test_child_spans_do_not_cause_warning_logs():
 def test_metrics():
     import mock
 
-    from ddtrace.internal.writer import NativeWriter
+    from ddtrace import config
     from ddtrace.trace import tracer as t
     from tests.utils import AnyInt
     from tests.utils import override_global_config
@@ -246,7 +245,7 @@ def test_metrics():
         mock.call("datadog.tracer.buffer.accepted.spans", 300, tags=None),
     ]
 
-    if not isinstance(t._span_aggregator.writer, NativeWriter):
+    if not config._trace_writer_native:
         calls += [
             mock.call("datadog.tracer.http.requests", 1, tags=None),
             mock.call("datadog.tracer.http.sent.bytes", AnyInt(), tags=None),
@@ -266,7 +265,7 @@ def test_metrics():
 def test_metrics_partial_flush_disabled():
     import mock
 
-    from ddtrace.internal.writer import NativeWriter
+    from ddtrace import config
     from ddtrace.trace import tracer as t
     from tests.utils import AnyInt
     from tests.utils import override_global_config
@@ -295,7 +294,7 @@ def test_metrics_partial_flush_disabled():
         mock.call("datadog.tracer.buffer.accepted.spans", 600, tags=None),
     ]
 
-    if not isinstance(t._span_aggregator.writer, NativeWriter):
+    if not config._trace_writer_native:
         calls += [
             mock.call("datadog.tracer.http.requests", 1, tags=None),
             mock.call("datadog.tracer.http.sent.bytes", AnyInt(), tags=None),
@@ -313,13 +312,12 @@ def test_metrics_partial_flush_disabled():
 def test_single_trace_too_large():
     import mock
 
-    from ddtrace.internal.writer import NativeWriter
     from ddtrace.trace import tracer as t
     from tests.utils import AnyInt
     from tests.utils import AnyStr
 
     assert t._span_aggregator.partial_flush_enabled is True
-    with mock.patch.object(NativeWriter, "flush_queue", return_value=None), mock.patch(
+    with mock.patch.object(t._span_aggregator.writer, "flush_queue", return_value=None), mock.patch(
         "ddtrace.internal.writer.writer.log"
     ) as log:
         with t.trace("huge"):
@@ -371,7 +369,7 @@ def test_trace_generates_error_logs_when_trace_agent_url_invalid():
 
     import mock
 
-    from ddtrace.internal.writer import NativeWriter
+    from ddtrace import config
     from ddtrace.trace import tracer as t
 
     with mock.patch("ddtrace.internal.writer.writer.log") as log:
@@ -380,8 +378,7 @@ def test_trace_generates_error_logs_when_trace_agent_url_invalid():
 
     encoding = os.environ["DD_TRACE_API_VERSION"]
 
-    # TODO: Use proper feature flag
-    if isinstance(t._span_aggregator.writer, NativeWriter):
+    if config._trace_writer_native:
         calls = [
             mock.call(
                 "failed to send, dropping %d traces to intake at %s: %s",
@@ -522,13 +519,11 @@ def test_trace_with_invalid_client_endpoint_generates_error_log():
 def test_trace_with_invalid_payload_generates_error_log():
     import mock
 
-    from ddtrace.internal.writer import NativeWriter
-    from ddtrace.trace import tracer as t
+    from ddtrace import config
     from tests.integration.utils import send_invalid_payload_and_get_logs
 
     log = send_invalid_payload_and_get_logs()
-    # TODO: Use proper feature flag
-    if isinstance(t._span_aggregator.writer, NativeWriter):
+    if config._trace_writer_native:
         log.error.assert_has_calls(
             [
                 mock.call(
@@ -558,13 +553,11 @@ def test_trace_with_invalid_payload_generates_error_log():
 def test_trace_with_invalid_payload_logs_payload_when_LOG_ERROR_PAYLOADS():
     import mock
 
-    from ddtrace.internal.writer import NativeWriter
-    from ddtrace.trace import tracer as t
+    from ddtrace import config
     from tests.integration.utils import send_invalid_payload_and_get_logs
 
     log = send_invalid_payload_and_get_logs()
-    # TODO: Use proper feature flag
-    if isinstance(t._span_aggregator.writer, NativeWriter):
+    if config._trace_writer_native:
         log.error.assert_has_calls(
             [
                 mock.call(

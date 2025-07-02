@@ -33,6 +33,7 @@ from ddtrace.internal.telemetry.constants import TELEMETRY_NAMESPACE
 from ddtrace.internal.utils.http import verify_url
 from ddtrace.internal.writer import AgentResponse
 from ddtrace.internal.writer import AgentWriter
+from ddtrace.internal.writer import AgentWriterInterface
 from ddtrace.internal.writer import LogWriter
 from ddtrace.internal.writer import NativeWriter
 from ddtrace.internal.writer import TraceWriter
@@ -278,15 +279,28 @@ class SpanAggregator(SpanProcessor):
             self.writer: TraceWriter = LogWriter()
         else:
             verify_url(agent_config.trace_agent_url)
-            self.writer = NativeWriter(
-                intake_url=agent_config.trace_agent_url,
-                dogstatsd=get_dogstatsd_client(agent_config.dogstatsd_url),
-                sync_mode=SpanAggregator._use_sync_mode(),
-                compute_stats_enabled=config._trace_compute_stats,
-                report_metrics=not asm_config._apm_opt_out,
-                response_callback=self._agent_response_callback,
-                stats_opt_out=asm_config._apm_opt_out,
-            )
+            if config._trace_writer_native:
+                self.writer = NativeWriter(
+                    intake_url=agent_config.trace_agent_url,
+                    dogstatsd=get_dogstatsd_client(agent_config.dogstatsd_url),
+                    sync_mode=SpanAggregator._use_sync_mode(),
+                    compute_stats_enabled=config._trace_compute_stats,
+                    report_metrics=not asm_config._apm_opt_out,
+                    response_callback=self._agent_response_callback,
+                    stats_opt_out=asm_config._apm_opt_out,
+                )
+            else:
+                self.writer = AgentWriter(
+                    intake_url=agent_config.trace_agent_url,
+                    dogstatsd=get_dogstatsd_client(agent_config.dogstatsd_url),
+                    sync_mode=SpanAggregator._use_sync_mode(),
+                    headers={"Datadog-Client-Computed-Stats": "yes"}
+                    if (config._trace_compute_stats or asm_config._apm_opt_out)
+                    else {},
+                    report_metrics=not asm_config._apm_opt_out,
+                    response_callback=self._agent_response_callback,
+                )
+                
         # Initialize the trace buffer and lock
         self._traces: DefaultDict[int, _Trace] = defaultdict(lambda: _Trace())
         self._lock: RLock = RLock()
@@ -509,7 +523,7 @@ class SpanAggregator(SpanProcessor):
             # Stopping them before that will raise a ServiceStatusError.
             pass
 
-        if isinstance(self.writer, (AgentWriter, NativeWriter)) and appsec_enabled:
+        if isinstance(self.writer, AgentWriterInterface) and appsec_enabled:
             # Ensure AppSec metadata is encoded by setting the API version to v0.4.
             self.writer._api_version = "v0.4"
         # Re-create the writer to ensure it is consistent with updated configurations (ex: api_version)

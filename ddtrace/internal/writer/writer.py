@@ -99,6 +99,14 @@ class TraceWriter(metaclass=abc.ABCMeta):
     def flush_queue(self) -> None:
         pass
 
+class AgentWriterInterface(periodic.PeriodicService, TraceWriter, metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def set_test_session_token(self, token: Optional[str]) -> None:
+        pass
+
+    @abc.abstractmethod
+    def before_fork(self) -> None:
+        pass
 
 class LogWriter(TraceWriter):
     def __init__(
@@ -436,7 +444,7 @@ class AgentResponse(object):
         self.rate_by_service = rate_by_service
 
 
-class AgentWriter(HTTPWriter):
+class AgentWriter(HTTPWriter, AgentWriterInterface):
     """
     The Datadog Agent supports (at the time of writing this) receiving trace
     payloads up to 50MB. A trace payload is just a list of traces and the agent
@@ -617,8 +625,14 @@ class AgentWriter(HTTPWriter):
         headers["X-Datadog-Trace-Count"] = str(count)
         return headers
 
+    def before_fork(self) -> None:
+        pass
 
-class NativeWriter(periodic.PeriodicService, TraceWriter):
+    def set_test_session_token(self, token: Optional[str]) -> None:
+        super(AgentWriter, self)._headers["X-Datadog-Test-Session-Token"] = token or ""
+
+
+class NativeWriter(AgentWriterInterface):
     """Writer to an arbitrary HTTP intake endpoint."""
 
     RETRY_ATTEMPTS = 3
@@ -966,6 +980,9 @@ class NativeWriter(periodic.PeriodicService, TraceWriter):
         # FIXME: don't join() on stop(), let the caller handle this
         super(NativeWriter, self)._stop_service()
         self.join(timeout=timeout)
+
+    def before_fork(self) -> None:
+        self._exporter.stop_worker()
 
     def on_shutdown(self):
         try:
