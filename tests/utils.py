@@ -38,6 +38,7 @@ from ddtrace.internal.schema import SCHEMA_VERSION
 from ddtrace.internal.utils.formats import asbool
 from ddtrace.internal.utils.formats import parse_tags_str
 from ddtrace.internal.writer import NativeWriter
+from ddtrace.internal.writer.writer import AgentWriter
 from ddtrace.propagation._database_monitoring import listen as dbm_config_listen
 from ddtrace.propagation._database_monitoring import unlisten as dbm_config_unlisten
 from ddtrace.propagation.http import _DatadogMultiHeader
@@ -1324,19 +1325,8 @@ def check_test_agent_status():
         return False
 
 
-def flush_test_tracer_spans(writer):
-    client = writer._clients[0]
-    n_traces = len(client.encoder)
-    try:
-        encoded_traces, _ = client.encoder.encode()
-        if encoded_traces is None:
-            return
-        headers = writer._get_finalized_headers(n_traces, client)
-        response = writer._put(encoded_traces, add_dd_env_variables_to_headers(headers), client, no_trace=True)
-    except Exception:
-        return
-
-    assert response.status == 200, response.body
+def flush_test_tracer_spans(writer: AgentWriter):
+    writer.flush_queue(raise_exc=True)
 
 
 def add_dd_env_variables_to_headers(headers):
