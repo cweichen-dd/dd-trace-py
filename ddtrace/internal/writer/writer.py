@@ -101,12 +101,19 @@ class TraceWriter(metaclass=abc.ABCMeta):
 
 
 class AgentWriterInterface(periodic.PeriodicService, TraceWriter, metaclass=abc.ABCMeta):
+    intake_url: str
+    _api_version: str
+
     @abc.abstractmethod
     def set_test_session_token(self, token: Optional[str]) -> None:
         pass
 
     @abc.abstractmethod
     def before_fork(self) -> None:
+        pass
+
+    @abc.abstractmethod
+    def flush_queue(self, raise_exc: bool = False) -> None:
         pass
 
 
