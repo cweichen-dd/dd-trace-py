@@ -99,6 +99,7 @@ class TraceWriter(metaclass=abc.ABCMeta):
     def flush_queue(self) -> None:
         pass
 
+
 class AgentWriterInterface(periodic.PeriodicService, TraceWriter, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def set_test_session_token(self, token: Optional[str]) -> None:
@@ -107,6 +108,7 @@ class AgentWriterInterface(periodic.PeriodicService, TraceWriter, metaclass=abc.
     @abc.abstractmethod
     def before_fork(self) -> None:
         pass
+
 
 class LogWriter(TraceWriter):
     def __init__(

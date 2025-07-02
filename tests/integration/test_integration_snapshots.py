@@ -78,18 +78,19 @@ def test_filters():
 # Have to use sync mode snapshot so that the traces are associated to this
 # test case since we use a custom writer (that doesn't have the trace headers
 # injected).
-@pytest.mark.subprocess(parametrize={"writer_class":["AgentWriter", "NativeWriter"]})
+@pytest.mark.subprocess(parametrize={"writer_class": ["AgentWriter", "NativeWriter"]})
 @snapshot(async_mode=False)
 def test_synchronous_writer(writer_class):
     import os
-    from ddtrace.trace import tracer
+
     from ddtrace.internal.writer import AgentWriter
     from ddtrace.internal.writer import NativeWriter
+    from ddtrace.trace import tracer
 
     if os.environ["writer_class"] == "AgentWriter":
-        writer_class=AgentWriter
+        writer_class = AgentWriter
     elif os.environ["writer_class"] == "NativeWriter":
-        writer_class=NativeWriter
+        writer_class = NativeWriter
 
     writer = writer_class(tracer._span_aggregator.writer.intake_url, sync_mode=True)
     tracer._span_aggregator.writer = writer

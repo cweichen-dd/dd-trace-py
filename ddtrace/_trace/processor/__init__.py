@@ -300,7 +300,7 @@ class SpanAggregator(SpanProcessor):
                     report_metrics=not asm_config._apm_opt_out,
                     response_callback=self._agent_response_callback,
                 )
-                
+
         # Initialize the trace buffer and lock
         self._traces: DefaultDict[int, _Trace] = defaultdict(lambda: _Trace())
         self._lock: RLock = RLock()

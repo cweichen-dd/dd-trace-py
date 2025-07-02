@@ -15,7 +15,6 @@ from typing import List  # noqa:F401
 from urllib import parse
 import urllib.parse
 
-from ddtrace.internal.writer.writer import AgentWriterInterface
 import pytest
 import wrapt
 
@@ -41,7 +40,6 @@ from ddtrace.internal.utils.formats import parse_tags_str
 from ddtrace.internal.writer import AgentWriter
 from ddtrace.internal.writer import AgentWriterInterface
 from ddtrace.internal.writer import NativeWriter
-from ddtrace.internal.writer.writer import AgentWriter
 from ddtrace.propagation._database_monitoring import listen as dbm_config_listen
 from ddtrace.propagation._database_monitoring import unlisten as dbm_config_unlisten
 from ddtrace.propagation.http import _DatadogMultiHeader
@@ -622,7 +620,7 @@ class DummyWriter(DummyWriterMixin, AgentWriterInterface):
 
     def set_test_session_token(self, token) -> None:
         return self.inner_writer.set_test_session_token(token)
-    
+
     def __getattr__(self, name):
         return self.inner_writer.__getattribute__(name)
 

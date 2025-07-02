@@ -1,6 +1,6 @@
 from .writer import AgentResponse  # noqa: I001,F401
 from .writer import AgentWriter  # noqa:I001,F401
-from .writer import AgentWriterInterface # noqa:I001,F401
+from .writer import AgentWriterInterface  # noqa:I001,F401
 from .writer import DEFAULT_SMA_WINDOW  # noqa:F401
 from .writer import HTTPWriter  # noqa:F401
 from .writer import LogWriter  # noqa:F401

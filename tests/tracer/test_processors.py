@@ -156,7 +156,6 @@ def test_aggregator_reset_default_args():
     assert len(aggr._span_metrics["spans_created"]) == 0
 
 
-
 @pytest.mark.parametrize("writer_class", (AgentWriter, NativeWriter))
 def test_aggregator_reset_with_args(writer_class):
     """
