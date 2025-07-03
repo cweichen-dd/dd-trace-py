@@ -392,6 +392,7 @@ def test_trace_generates_error_logs_when_trace_agent_url_invalid():
             mock.call(
                 "failed to send, dropping %d traces to intake at %s after %d retries",
                 1,
+                "http://localhost:8125/{}/traces".format(encoding if encoding else "v0.5"),
                 3,
             )
         ]
