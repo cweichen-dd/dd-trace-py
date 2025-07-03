@@ -96,8 +96,12 @@ class MemoryCollector(collector.PeriodicCollector):
             if len(event) == 3:
                 (frames, _, thread_id), size, in_use = event
                 count = 1
-            else:
+                reported = False
+            elif len(event) == 4:
                 (frames, _, thread_id), size, in_use, count = event
+                reported = False
+            else:
+                (frames, _, thread_id), size, in_use, count, reported = event
             
             if not self.ignore_profiler or thread_id not in thread_id_ignore_set:
                 samples.append((size, count, in_use))
@@ -106,7 +110,7 @@ class MemoryCollector(collector.PeriodicCollector):
                 
                 if in_use:
                     handle.push_heap(size)
-                else:
+                if not in_use or not reported:
                     handle.push_alloc(size, count)
                 
                 handle.push_threadinfo(

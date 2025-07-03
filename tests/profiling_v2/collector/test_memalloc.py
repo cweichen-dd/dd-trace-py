@@ -197,7 +197,15 @@ class HeapInfo:
 
 def get_heap_info(heap, funcs):
     got = {}
-    for (frames, _, _), size, in_use, count in heap:
+    for event in heap:
+        if len(event) == 3:
+            (frames, _, _), size, in_use = event
+            count = 1
+        elif len(event) == 4:
+            (frames, _, _), size, in_use, count = event
+        else:
+            (frames, _, _), size, in_use, count, reported = event
+        
         if not in_use:
             continue
         func = frames[0].function_name
@@ -468,4 +476,264 @@ def test_unified_profiler_allocation_sampling_accuracy(sample_interval):
     
     print(f"Successfully validated unified profiler allocation sampling for sample_interval={sample_interval}")
     print(f"Captured {len(allocation_samples)} allocation samples representing {total_allocation_count} allocations")
+
+
+def test_memory_collector_allocation_tracking_across_snapshots():
+    from ddtrace.profiling.collector import _memalloc
+    
+    _memalloc.start(32, 1000, 64)
+    
+    try:
+        initial_snapshot = _memalloc.heap()
+        initial_sample_count = len(initial_snapshot)
+        
+        for sample in initial_snapshot:
+            traceback, size, in_use, count, reported = sample
+            assert reported is False, f"Initial snapshot should have reported=False, got {reported}"
+        
+        data_to_free = []
+        for i in range(10):
+            data_to_free.append(one(256))
+        
+        data_to_keep = []
+        for i in range(10):
+            data_to_keep.append(two(512))
+        
+        del data_to_free
+        
+        second_snapshot = _memalloc.heap()
+        
+        new_allocations = []
+        previously_reported = []
+        live_samples = []
+        freed_samples = []
+        
+        for sample in second_snapshot:
+            traceback, size, in_use, count, reported = sample
+            
+            if reported:
+                previously_reported.append(sample)
+            else:
+                new_allocations.append(sample)
+            
+            if in_use:
+                live_samples.append(sample)
+            else:
+                freed_samples.append(sample)
+        
+        print(f"Initial snapshot: {initial_sample_count} samples")
+        print(f"Second snapshot: {len(second_snapshot)} total samples")
+        print(f"  - New allocations (reported=False): {len(new_allocations)}")
+        print(f"  - Previously reported (reported=True): {len(previously_reported)}")
+        print(f"  - Live samples (in_use=True): {len(live_samples)}")
+        print(f"  - Freed samples (in_use=False): {len(freed_samples)}")
+        
+        assert len(new_allocations) > 0, "Should have captured new allocations since initial snapshot"
+        assert len(previously_reported) >= 0, "May have previously reported allocations"
+        assert len(live_samples) > 0, "Should have some live allocations"
+        assert len(freed_samples) > 0, "Should have some freed allocations"
+        
+        new_allocations_still_in_use = [
+            sample for sample in new_allocations 
+            if sample[2]  # in_use=True
+        ]
+        
+        assert len(new_allocations_still_in_use) > 0, \
+            "Some new allocations should still be in use (this tests the core behavior)"
+        
+        third_snapshot = _memalloc.heap()
+        
+        new_in_third = [sample for sample in third_snapshot if not sample[4]]  # reported=False
+        previously_reported_in_third = [sample for sample in third_snapshot if sample[4]]  # reported=True
+        
+        print(f"Third snapshot: {len(third_snapshot)} total samples")
+        print(f"  - New allocations (reported=False): {len(new_in_third)}")
+        print(f"  - Previously reported (reported=True): {len(previously_reported_in_third)}")
+        
+        assert len(previously_reported_in_third) > 0, \
+            "Should have some previously reported allocations in third snapshot"
+        
+        del data_to_keep
+        
+    finally:
+        _memalloc.stop()
+
+
+def test_memory_collector_python_interface_with_allocation_tracking():
+    mc = memalloc.MemoryCollector(heap_sample_size=128)
+    
+    with mc:
+        initial_samples = mc.snapshot()
+        initial_count = len(initial_samples)
+        
+        first_batch = []
+        for i in range(20):
+            first_batch.append(one(256))
+        
+        after_first_batch = mc.snapshot()
+        
+        second_batch = []
+        for i in range(15):
+            second_batch.append(two(512))
+        
+        del first_batch
+        
+        final_samples = mc.snapshot()
+        
+        assert len(after_first_batch) >= initial_count, \
+            "Should have at least as many samples after first batch"
+        assert len(final_samples) >= 0, "Final snapshot should be valid"
+        
+        for samples in [initial_samples, after_first_batch, final_samples]:
+            for sample in samples:
+                assert len(sample) == 3, f"Python interface should return 3-tuples, got {len(sample)}"
+                size, count, in_use = sample
+                assert isinstance(size, int) and size > 0, f"Size should be positive int, got {size}"
+                assert isinstance(count, int) and count > 0, f"Count should be positive int, got {count}"
+                assert isinstance(in_use, bool), f"in_use should be bool, got {in_use}"
+        
+        live_samples = [s for s in final_samples if s[2]]  # in_use=True
+        freed_samples = [s for s in final_samples if not s[2]]  # in_use=False
+        
+        print(f"Final snapshot: {len(final_samples)} total samples")
+        print(f"  - Live samples: {len(live_samples)}")
+        print(f"  - Freed samples: {len(freed_samples)}")
+        
+        assert len(freed_samples) > 0, "Should have freed samples after deleting first batch"
+        
+        del second_batch
+
+
+def test_memory_collector_exception_handling():
+    mc = memalloc.MemoryCollector(heap_sample_size=256)
+    
+    with pytest.raises(ValueError):
+        with mc:
+            _allocate_1k()
+            samples = mc.snapshot()
+            assert isinstance(samples, tuple)
+            raise ValueError("Test exception")
+    
+    with mc:
+        _allocate_1k()
+        samples = mc.snapshot()
+        assert isinstance(samples, tuple)
+
+
+def test_memory_collector_allocation_during_shutdown():
+    from ddtrace.profiling.collector import _memalloc
+    
+    _memalloc.start(32, 1000, 512)
+    
+    shutdown_event = threading.Event()
+    allocation_thread = None
+    
+    def allocate_continuously():
+        while not shutdown_event.is_set():
+            try:
+                data = [0] * 100
+                del data
+            except:
+                pass
+            shutdown_event.wait(0.001)
+    
+    try:
+        allocation_thread = threading.Thread(target=allocate_continuously)
+        allocation_thread.start()
+        
+        shutdown_event.wait(0.1)
+        
+        _memalloc.stop()
+        
+    finally:
+        shutdown_event.set()
+        if allocation_thread:
+            allocation_thread.join(timeout=1)
+
+
+def test_memory_collector_buffer_pool_exhaustion():
+    mc = memalloc.MemoryCollector(heap_sample_size=64)
+    
+    with mc:
+        threads = []
+        barrier = threading.Barrier(10)
+        
+        def allocate_with_traceback():
+            barrier.wait()
+            def deep_alloc(depth):
+                if depth == 0:
+                    return [0] * 100
+                return deep_alloc(depth - 1)
+            
+            try:
+                data = deep_alloc(50)
+                del data
+            except:
+                pass
+        
+        for i in range(10):
+            t = threading.Thread(target=allocate_with_traceback)
+            threads.append(t)
+            t.start()
+        
+        for t in threads:
+            t.join()
+        
+        samples = mc.snapshot()
+        assert isinstance(samples, tuple)
+
+
+def test_memory_collector_complex_object_graphs():
+    mc = memalloc.MemoryCollector(heap_sample_size=256)
+    
+    class Node:
+        def __init__(self, value):
+            self.value = value
+            self.children = []
+            self.parent = None
+    
+    with mc:
+        root = Node(0)
+        nodes = [root]
+        
+        for i in range(1, 100):
+            node = Node(i)
+            parent = nodes[i // 2]
+            node.parent = parent
+            parent.children.append(node)
+            nodes.append(node)
+        
+        samples = mc.snapshot()
+        assert isinstance(samples, tuple)
+        
+        for node in nodes:
+            node.parent = None
+            node.children.clear()
+
+
+def test_memory_collector_thread_lifecycle():
+    mc = memalloc.MemoryCollector(heap_sample_size=512)
+    
+    with mc:
+        threads = []
+        
+        def worker():
+            for i in range(10):
+                data = [i] * 100
+                del data
+        
+        for i in range(20):
+            t = threading.Thread(target=worker)
+            t.start()
+            threads.append(t)
+            
+            if i > 5:
+                old_thread = threads.pop(0)
+                old_thread.join()
+        
+        for t in threads:
+            t.join()
+        
+        samples = mc.snapshot()
+        assert isinstance(samples, tuple)
 

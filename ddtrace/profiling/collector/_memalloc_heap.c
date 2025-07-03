@@ -386,7 +386,7 @@ memalloc_heap(void)
                 break;
             }
             
-            PyObject* tb_and_info = PyTuple_New(4);
+            PyObject* tb_and_info = PyTuple_New(5);
             if (tb_and_info == NULL) {
                 continue;
             }
@@ -396,6 +396,8 @@ memalloc_heap(void)
             PyTuple_SET_ITEM(tb_and_info, 2, Py_True); /* in_use = True for live samples */
             Py_INCREF(Py_True);
             PyTuple_SET_ITEM(tb_and_info, 3, PyLong_FromSize_t(tb->count));
+            PyTuple_SET_ITEM(tb_and_info, 4, tb->reported ? Py_True : Py_False);
+            Py_INCREF(tb->reported ? Py_True : Py_False);
             
             PyList_SET_ITEM(heap_list, list_index, tb_and_info);
             list_index++;
@@ -415,7 +417,7 @@ memalloc_heap(void)
         
         traceback_t* tb = global_heap_tracker.allocation_list.tab[i];
         
-        PyObject* tb_and_info = PyTuple_New(4);
+        PyObject* tb_and_info = PyTuple_New(5);
         if (tb_and_info == NULL) {
             continue;
         }
@@ -425,6 +427,8 @@ memalloc_heap(void)
         PyTuple_SET_ITEM(tb_and_info, 2, Py_False); /* in_use = False for freed samples */
         Py_INCREF(Py_False);
         PyTuple_SET_ITEM(tb_and_info, 3, PyLong_FromSize_t(tb->count));
+        PyTuple_SET_ITEM(tb_and_info, 4, tb->reported ? Py_True : Py_False);
+        Py_INCREF(tb->reported ? Py_True : Py_False);
         
         PyList_SET_ITEM(heap_list, list_index, tb_and_info);
         list_index++;
