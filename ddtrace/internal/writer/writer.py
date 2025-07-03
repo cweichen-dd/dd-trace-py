@@ -638,7 +638,7 @@ class AgentWriter(HTTPWriter, AgentWriterInterface):
         pass
 
     def set_test_session_token(self, token: Optional[str]) -> None:
-        super(AgentWriter, self)._headers["X-Datadog-Test-Session-Token"] = token or ""
+        self._headers["X-Datadog-Test-Session-Token"] = token or ""
 
 
 class NativeWriter(AgentWriterInterface):

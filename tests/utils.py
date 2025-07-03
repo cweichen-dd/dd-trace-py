@@ -12,6 +12,7 @@ import subprocess
 import sys
 import time
 from typing import List  # noqa:F401
+from typing import Optional  # noqa:F401
 from urllib import parse
 import urllib.parse
 
@@ -612,16 +613,16 @@ class DummyWriter(DummyWriterMixin, AgentWriterInterface):
     def recreate(self):
         return self.__class__(trace_flush_enabled=self._trace_flush_enabled)
 
-    def flush_queue(self) -> None:
-        return self.inner_writer.flush_queue()
+    def flush_queue(self, raise_exc: bool = False) -> None:
+        return self.inner_writer.flush_queue(raise_exc)
 
     def before_fork(self) -> None:
         return self.inner_writer.before_fork()
 
-    def set_test_session_token(self, token) -> None:
+    def set_test_session_token(self, token: Optional[str]) -> None:
         return self.inner_writer.set_test_session_token(token)
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str):
         return self.inner_writer.__getattribute__(name)
 
 
@@ -1092,10 +1093,10 @@ def snapshot_context(
             pytest.fail("Could not flush the queue before test case: %s" % str(e), pytrace=True)
 
         if async_mode:
+            # Patch the tracer writer to include the test token header for all requests.
             if isinstance(tracer._span_aggregator.writer, AgentWriterInterface):
                 tracer._span_aggregator.writer.set_test_session_token(token)
             else:
-                # Patch the tracer writer to include the test token header for all requests.
                 tracer._span_aggregator.writer._headers["X-Datadog-Test-Session-Token"] = token
 
             # Also add a header to the environment for subprocesses test cases that might use snapshotting.
@@ -1140,7 +1141,7 @@ def snapshot_context(
                     tracer._span_aggregator.writer.set_test_session_token(None)
                 else:
                     del tracer._span_aggregator.writer._headers["X-Datadog-Test-Session-Token"]
-                    del os.environ["_DD_TRACE_WRITER_ADDITIONAL_HEADERS"]
+                del os.environ["_DD_TRACE_WRITER_ADDITIONAL_HEADERS"]
 
         conn = httplib.HTTPConnection(parsed.hostname, parsed.port)
 
