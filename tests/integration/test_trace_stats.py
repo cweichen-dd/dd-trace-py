@@ -48,17 +48,22 @@ def send_once_stats_tracer(stats_tracer):
     """
     This is a variation on the tracer that has the SpanStatsProcessor disabled until we leave the tracer context.
     """
+    from ddtrace import config
+
     stats_tracer.trace = functools.partial(consistent_end_trace, stats_tracer.trace)
 
-    # Stop the stats processor while running the function, to prevent flushing
-    for processor in stats_tracer._span_processors:
-        if isinstance(processor, SpanStatsProcessorV06):
-            processor.stop()
-            break
-    yield stats_tracer
+    if not config._trace_writer_native:
+        # Stop the stats processor while running the function, to prevent flushing
+        for processor in stats_tracer._span_processors:
+            if isinstance(processor, SpanStatsProcessorV06):
+                processor.stop()
+                break
+        yield stats_tracer
 
-    # Restart the stats processor; it will be flushed during shutdown
-    processor.start()
+        # Restart the stats processor; it will be flushed during shutdown
+        processor.start()
+    else:
+        yield stats_tracer
 
 
 @pytest.mark.parametrize("envvar", ["DD_TRACE_STATS_COMPUTATION_ENABLED", "DD_TRACE_COMPUTE_STATS"])
@@ -124,7 +129,7 @@ def test_stats_report_hostname(get_hostname):
 
 # Can't use a value between 0 and 1 since sampling is not deterministic.
 @pytest.mark.parametrize("sample_rate", [1.0, 0.0])
-@pytest.mark.snapshot()
+@pytest.mark.snapshot(wait_for_num_traces=10)
 def test_sampling_rate(stats_tracer, sample_rate):
     """Ensure traces are sent according to the sampling rate."""
     for _ in range(10):
@@ -132,14 +137,14 @@ def test_sampling_rate(stats_tracer, sample_rate):
             pass
 
 
-@pytest.mark.snapshot()
+@pytest.mark.snapshot(wait_for_num_traces=30)
 def test_stats_30(send_once_stats_tracer):
     for _ in range(30):
         with send_once_stats_tracer.trace("name", service="abc", resource="/users/list"):
             pass
 
 
-@pytest.mark.snapshot()
+@pytest.mark.snapshot(wait_for_num_traces=30)
 def test_stats_errors(send_once_stats_tracer):
     for i in range(30):
         with send_once_stats_tracer.trace("name", service="abc", resource="/users/list") as span:
@@ -147,7 +152,7 @@ def test_stats_errors(send_once_stats_tracer):
                 span.error = 1
 
 
-@pytest.mark.snapshot()
+@pytest.mark.snapshot(wait_for_num_traces=7)
 def test_stats_aggrs(send_once_stats_tracer):
     """
     When different span properties are set
@@ -181,7 +186,7 @@ def test_stats_aggrs(send_once_stats_tracer):
         pass
 
 
-@pytest.mark.snapshot()
+@pytest.mark.snapshot(wait_for_num_traces=20)
 def test_measured_span(send_once_stats_tracer):
     for _ in range(10):
         with send_once_stats_tracer.trace("parent"):  # Should have stats
@@ -193,7 +198,7 @@ def test_measured_span(send_once_stats_tracer):
                 span.set_tag(_SPAN_MEASURED_KEY)
 
 
-@pytest.mark.snapshot()
+@pytest.mark.snapshot(wait_for_num_traces=30)
 def test_top_level(send_once_stats_tracer):
     for _ in range(30):
         with send_once_stats_tracer.trace("parent", service="svc-one"):  # Should have stats

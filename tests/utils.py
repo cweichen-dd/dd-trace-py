@@ -587,7 +587,7 @@ class DummyWriter(DummyWriterMixin, AgentWriterInterface):
         if dd_config._trace_writer_native:
             self._inner_writer = NativeWriter(*args, **kwargs)
         else:
-            self.inner_writer = AgentWriter(*args, **kwargs)
+            self._inner_writer = AgentWriter(*args, **kwargs)
 
         DummyWriterMixin.__init__(self, *args, **kwargs)
         self.json_encoder = JSONEncoder()
@@ -599,7 +599,7 @@ class DummyWriter(DummyWriterMixin, AgentWriterInterface):
             traces = [spans]
             self.json_encoder.encode_traces(traces)
             if self._trace_flush_enabled:
-                self.inner_writer.write(spans=spans)
+                self._inner_writer.write(spans=spans)
             else:
                 self.msgpack_encoder.put(spans)
                 self.msgpack_encoder.encode()
@@ -614,16 +614,16 @@ class DummyWriter(DummyWriterMixin, AgentWriterInterface):
         return self.__class__(trace_flush_enabled=self._trace_flush_enabled)
 
     def flush_queue(self, raise_exc: bool = False) -> None:
-        return self.inner_writer.flush_queue(raise_exc)
+        return self._inner_writer.flush_queue(raise_exc)
 
     def before_fork(self) -> None:
-        return self.inner_writer.before_fork()
+        return self._inner_writer.before_fork()
 
     def set_test_session_token(self, token: Optional[str]) -> None:
-        return self.inner_writer.set_test_session_token(token)
+        return self._inner_writer.set_test_session_token(token)
 
     def __getattr__(self, name: str):
-        return self.inner_writer.__getattribute__(name)
+        return self._inner_writer.__getattribute__(name)
 
 
 class DummyCIVisibilityWriter(DummyWriterMixin, CIVisibilityWriter):
@@ -1096,6 +1096,7 @@ def snapshot_context(
             # Patch the tracer writer to include the test token header for all requests.
             if isinstance(tracer._span_aggregator.writer, AgentWriterInterface):
                 tracer._span_aggregator.writer.set_test_session_token(token)
+                tracer._span_aggregator.writer.recreate()
             else:
                 tracer._span_aggregator.writer._headers["X-Datadog-Test-Session-Token"] = token
 

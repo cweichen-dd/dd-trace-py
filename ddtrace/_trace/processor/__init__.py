@@ -26,6 +26,7 @@ from ddtrace.internal.dogstatsd import get_dogstatsd_client
 from ddtrace.internal.logger import get_logger
 from ddtrace.internal.sampling import SpanSamplingRule
 from ddtrace.internal.sampling import get_span_sampling_rules
+from ddtrace.internal.sampling import is_single_span_sampled
 from ddtrace.internal.serverless import has_aws_lambda_agent_extension
 from ddtrace.internal.serverless import in_aws_lambda
 from ddtrace.internal.serverless import in_azure_function
@@ -173,6 +174,17 @@ class TraceSamplingProcessor(TraceProcessor):
             # only trace sample if we haven't already sampled
             if root_ctx and root_ctx.sampling_priority is None:
                 self.sampler.sample(trace[0])
+
+            # When stats computation is enabled in the tracer then we can
+            # safely drop the traces.
+            if not config._trace_writer_native and self._compute_stats_enabled and not self.apm_opt_out:
+                priority = root_ctx.sampling_priority if root_ctx is not None else None
+                if priority is not None and priority <= 0:
+                    # When any span is marked as keep by a single span sampling
+                    # decision then we still send all and only those spans.
+                    single_spans = [_ for _ in trace if is_single_span_sampled(_)]
+
+                    return single_spans or None
 
             # single span sampling rules are applied after trace sampling
             if self.single_span_rules:
