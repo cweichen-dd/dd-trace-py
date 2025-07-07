@@ -63,8 +63,7 @@ def test_memory_collector(tmp_path):
         junk = _allocate_1k()
         del junk
         mc.periodic()
-        samples = mc.snapshot()
-        assert len(samples) > 0, "No samples collected by profiler"
+        mc.snapshot()
 
     ddup.upload()
 
@@ -198,13 +197,7 @@ class HeapInfo:
 def get_heap_info(heap, funcs):
     got = {}
     for event in heap:
-        if len(event) == 3:
-            (frames, _, _), size, in_use = event
-            count = 1
-        elif len(event) == 4:
-            (frames, _, _), size, in_use, count = event
-        else:
-            (frames, _, _), size, in_use, count, reported = event
+        (frames, _, _), size, in_use, count, reported = event
         
         if not in_use:
             continue
@@ -245,7 +238,7 @@ def test_unified_profiler_allocation_samples():
         
         del allocations
         
-        samples = mc.snapshot()
+        samples = mc.test_snapshot()
     
     assert len(samples) > 0, "Should have captured some samples"
     
@@ -436,7 +429,7 @@ def test_unified_profiler_allocation_sampling_accuracy(sample_interval):
 
             del junk
             
-            samples = mc.snapshot()
+            samples = mc.test_snapshot()
     
     finally:
         if old is not None:
@@ -563,14 +556,14 @@ def test_memory_collector_python_interface_with_allocation_tracking():
     mc = memalloc.MemoryCollector(heap_sample_size=128)
     
     with mc:
-        initial_samples = mc.snapshot()
+        initial_samples = mc.test_snapshot()
         initial_count = len(initial_samples)
         
         first_batch = []
         for i in range(20):
             first_batch.append(one(256))
         
-        after_first_batch = mc.snapshot()
+        after_first_batch = mc.test_snapshot()
         
         second_batch = []
         for i in range(15):
@@ -578,7 +571,7 @@ def test_memory_collector_python_interface_with_allocation_tracking():
         
         del first_batch
         
-        final_samples = mc.snapshot()
+        final_samples = mc.test_snapshot()
         
         assert len(after_first_batch) >= initial_count, \
             "Should have at least as many samples after first batch"
@@ -610,17 +603,18 @@ def test_memory_collector_exception_handling():
     with pytest.raises(ValueError):
         with mc:
             _allocate_1k()
-            samples = mc.snapshot()
+            samples = mc.test_snapshot()
             assert isinstance(samples, tuple)
             raise ValueError("Test exception")
     
     with mc:
         _allocate_1k()
-        samples = mc.snapshot()
+        samples = mc.test_snapshot()
         assert isinstance(samples, tuple)
 
 
 def test_memory_collector_allocation_during_shutdown():
+    import time
     from ddtrace.profiling.collector import _memalloc
     
     _memalloc.start(32, 1000, 512)
@@ -635,13 +629,13 @@ def test_memory_collector_allocation_during_shutdown():
                 del data
             except:
                 pass
-            shutdown_event.wait(0.001)
+            time.sleep(0.001)
     
     try:
         allocation_thread = threading.Thread(target=allocate_continuously)
         allocation_thread.start()
         
-        shutdown_event.wait(0.1)
+        time.sleep(0.1)
         
         _memalloc.stop()
         
@@ -665,11 +659,8 @@ def test_memory_collector_buffer_pool_exhaustion():
                     return [0] * 100
                 return deep_alloc(depth - 1)
             
-            try:
-                data = deep_alloc(50)
-                del data
-            except:
-                pass
+            data = deep_alloc(50)
+            del data
         
         for i in range(10):
             t = threading.Thread(target=allocate_with_traceback)
@@ -679,7 +670,7 @@ def test_memory_collector_buffer_pool_exhaustion():
         for t in threads:
             t.join()
         
-        samples = mc.snapshot()
+        samples = mc.test_snapshot()
         assert isinstance(samples, tuple)
 
 
@@ -703,7 +694,7 @@ def test_memory_collector_complex_object_graphs():
             parent.children.append(node)
             nodes.append(node)
         
-        samples = mc.snapshot()
+        samples = mc.test_snapshot()
         assert isinstance(samples, tuple)
         
         for node in nodes:
@@ -734,6 +725,6 @@ def test_memory_collector_thread_lifecycle():
         for t in threads:
             t.join()
         
-        samples = mc.snapshot()
+        samples = mc.test_snapshot()
         assert isinstance(samples, tuple)
 

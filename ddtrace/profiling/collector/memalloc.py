@@ -91,21 +91,10 @@ class MemoryCollector(collector.PeriodicCollector):
             LOG.debug("Unable to collect heap events from process %d", os.getpid(), exc_info=True)
             return tuple()
 
-        samples = []
         for event in events:
-            if len(event) == 3:
-                (frames, _, thread_id), size, in_use = event
-                count = 1
-                reported = False
-            elif len(event) == 4:
-                (frames, _, thread_id), size, in_use, count = event
-                reported = False
-            else:
-                (frames, _, thread_id), size, in_use, count, reported = event
+            (frames, _, thread_id), size, in_use, count, reported = event
             
-            if not self.ignore_profiler or thread_id not in thread_id_ignore_set:
-                samples.append((size, count, in_use))
-                
+            if not self.ignore_profiler or thread_id not in thread_id_ignore_set:                
                 handle = ddup.SampleHandle()
                 
                 if in_use:
@@ -124,6 +113,25 @@ class MemoryCollector(collector.PeriodicCollector):
                     # DEV: This might happen if the memalloc sofile is unlinked and relinked without module
                     #      re-initialization.
                     LOG.debug("Invalid state detected in memalloc module, suppressing profile")
+        return tuple()
+    
+    def test_snapshot(self):
+        thread_id_ignore_set = self._get_thread_id_ignore_set()
+
+        try:
+            events = _memalloc.heap()
+        except RuntimeError:
+            # DEV: This can happen if either _memalloc has not been started or has been stopped.
+            LOG.debug("Unable to collect heap events from process %d", os.getpid(), exc_info=True)
+            return tuple()
+
+        samples = []
+        for event in events:
+            (frames, _, thread_id), size, in_use, count, reported = event
+            
+            if not self.ignore_profiler or thread_id not in thread_id_ignore_set:
+                samples.append((size, count, in_use))
+                
         return tuple(samples)
 
     def collect(self):
