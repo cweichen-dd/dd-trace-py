@@ -129,7 +129,7 @@ def test_stats_report_hostname(get_hostname):
 
 # Can't use a value between 0 and 1 since sampling is not deterministic.
 @pytest.mark.parametrize("sample_rate", [1.0, 0.0])
-@pytest.mark.snapshot(wait_for_num_traces=10)
+@pytest.mark.snapshot()
 def test_sampling_rate(stats_tracer, sample_rate):
     """Ensure traces are sent according to the sampling rate."""
     for _ in range(10):
@@ -137,14 +137,14 @@ def test_sampling_rate(stats_tracer, sample_rate):
             pass
 
 
-@pytest.mark.snapshot(wait_for_num_traces=30)
+@pytest.mark.snapshot()
 def test_stats_30(send_once_stats_tracer):
     for _ in range(30):
         with send_once_stats_tracer.trace("name", service="abc", resource="/users/list"):
             pass
 
 
-@pytest.mark.snapshot(wait_for_num_traces=30)
+@pytest.mark.snapshot()
 def test_stats_errors(send_once_stats_tracer):
     for i in range(30):
         with send_once_stats_tracer.trace("name", service="abc", resource="/users/list") as span:
@@ -152,7 +152,7 @@ def test_stats_errors(send_once_stats_tracer):
                 span.error = 1
 
 
-@pytest.mark.snapshot(wait_for_num_traces=7)
+@pytest.mark.snapshot()
 def test_stats_aggrs(send_once_stats_tracer):
     """
     When different span properties are set
@@ -186,7 +186,7 @@ def test_stats_aggrs(send_once_stats_tracer):
         pass
 
 
-@pytest.mark.snapshot(wait_for_num_traces=20)
+@pytest.mark.snapshot()
 def test_measured_span(send_once_stats_tracer):
     for _ in range(10):
         with send_once_stats_tracer.trace("parent"):  # Should have stats
@@ -198,7 +198,7 @@ def test_measured_span(send_once_stats_tracer):
                 span.set_tag(_SPAN_MEASURED_KEY)
 
 
-@pytest.mark.snapshot(wait_for_num_traces=30)
+@pytest.mark.snapshot()
 def test_top_level(send_once_stats_tracer):
     for _ in range(30):
         with send_once_stats_tracer.trace("parent", service="svc-one"):  # Should have stats
