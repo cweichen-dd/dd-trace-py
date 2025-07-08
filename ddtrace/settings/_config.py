@@ -478,7 +478,7 @@ class Config(object):
         self._trace_writer_connection_reuse = _get_config(
             "DD_TRACE_WRITER_REUSE_CONNECTIONS", DEFAULT_REUSE_CONNECTIONS, asbool
         )
-        self._trace_writer_log_err_payload = _get_config("_DD_TRACE_WRITER_LOG_ERROR_PAYLOADS", False, asbool)
+        self._trace_writer_log_err_payload = _get_config("_DD_TRACE_WRITER_LOG_ERROR_PAYLOADS", True, asbool)
 
         # Use the NativeWriter instead of the AgentWriter
         self._trace_writer_native = _get_config("_DD_TRACE_WRITER_NATIVE", False, asbool)
