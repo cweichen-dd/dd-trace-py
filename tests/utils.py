@@ -625,6 +625,29 @@ class DummyWriter(DummyWriterMixin, AgentWriterInterface):
     def set_test_session_token(self, token: Optional[str]) -> None:
         return self._inner_writer.set_test_session_token(token)
 
+    def stop(self, timeout: Optional[float] = None) -> None:
+        self._inner_writer.stop(timeout=timeout)
+
+    @property
+    def interval(self) -> float:
+        return self._inner_writer._interval
+
+    @interval.setter
+    def interval(
+        self,
+        value: float,
+    ) -> None:
+        self._inner_writer.interval = value
+
+    def _start_service(self, *args, **kwargs) -> None:
+        self._inner_writer._start_service(*args, **kwargs)
+
+    def join(
+        self,
+        timeout: Optional[float],
+    ) -> None:
+        self._inner_writer.join(timeout=timeout)
+
     def periodic(self):
         self._inner_writer.periodic()
 
